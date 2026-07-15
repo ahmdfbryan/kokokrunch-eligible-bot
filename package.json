@@ -1,0 +1,21 @@
+{
+  "name": "kokokrunch-eligible-bot",
+  "version": "1.0.0",
+  "description": "Discord bot untuk cek eligibility member komunitas Roblox KokoKrunch Studios (14 hari join)",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:logs": "pm2 logs kokokrunch-eligible-bot"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
