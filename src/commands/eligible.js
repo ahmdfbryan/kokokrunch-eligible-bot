@@ -39,30 +39,47 @@ module.exports = {
       ]);
 
       if (!membership.isMember) {
-        await interaction.editReply({
-          embeds: [buildNotJoinedEmbed({ robloxUsername: resolved.username, avatarUrl })],
-        });
-        return;
-      }
+  await interaction.editReply({
+    embeds: [
+      buildNotJoinedEmbed({
+        robloxUsername: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+      }),
+    ],
+  });
+  return;
+}
 
       const daysSinceJoin = (Date.now() - membership.joinDate.getTime()) / (1000 * 60 * 60 * 24);
 
       if (daysSinceJoin >= config.eligibleDays) {
-        await interaction.editReply({
-          embeds: [buildVerifiedEmbed({ robloxUsername: resolved.username, avatarUrl })],
-        });
-      } else {
-        await interaction.editReply({
-          embeds: [
-            buildUnverifiedEmbed({
-              robloxUsername: resolved.username,
-              avatarUrl,
-              joinDate: membership.joinDate,
-              eligibleDays: config.eligibleDays,
-            }),
-          ],
-        });
-      }
+  await interaction.editReply({
+    embeds: [
+      buildVerifiedEmbed({
+        robloxUsername: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+        joinDate: membership.joinDate,
+      }),
+    ],
+  });
+} else {
+  await interaction.editReply({
+    embeds: [
+      buildUnverifiedEmbed({
+        robloxUsername: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+        joinDate: membership.joinDate,
+        eligibleDays: config.eligibleDays,
+      }),
+    ],
+  });
+}
     } catch (err) {
       console.error(`[Command /eligible] Gagal memproses username "${inputUsername}":`, err);
       await interaction.editReply({ embeds: [buildErrorEmbed()] });
