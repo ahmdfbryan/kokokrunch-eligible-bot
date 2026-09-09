@@ -21,7 +21,22 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    // Lapisan kedua pembatas channel (lapisan pertama diatur di Discord ->
+    // Server Settings -> Integrations). Jaga-jaga kalau pengaturan Discord-nya
+    // berubah / command dipanggil dari channel lain.
+    if (config.allowedChannelId && interaction.channelId !== config.allowedChannelId) {
+      await interaction.reply({
+        content: `Command ini hanya bisa dipakai di <#${config.allowedChannelId}>.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
     const inputUsername = interaction.options.getString('username', true).trim();
+
+    // Ikon server & bot -> dipakai untuk mempercantik author/footer embed
+    const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
+    const botAvatarUrl = interaction.client.user.displayAvatarURL({ size: 128 });
 
     // defer supaya Discord tidak timeout 3 detik sementara kita panggil API Roblox
     await interaction.deferReply();
@@ -29,7 +44,7 @@ module.exports = {
     try {
       const resolved = await roblox.resolveUsername(inputUsername);
       if (!resolved) {
-        await interaction.editReply({ embeds: [buildUserNotFoundEmbed(inputUsername)] });
+        await interaction.editReply({ embeds: [buildUserNotFoundEmbed(inputUsername, { botAvatarUrl })] });
         return;
       }
 
@@ -39,50 +54,56 @@ module.exports = {
       ]);
 
       if (!membership.isMember) {
-  await interaction.editReply({
-    embeds: [
-      buildNotJoinedEmbed({
-        robloxUsername: resolved.username,
-        displayName: resolved.displayName,
-        userId: resolved.userId,
-        avatarUrl,
-      }),
-    ],
-  });
-  return;
-}
+        await interaction.editReply({
+          embeds: [
+            buildNotJoinedEmbed({
+              robloxUsername: resolved.username,
+              displayName: resolved.displayName,
+              userId: resolved.userId,
+              avatarUrl,
+              guildIconUrl,
+              botAvatarUrl,
+            }),
+          ],
+        });
+        return;
+      }
 
       const daysSinceJoin = (Date.now() - membership.joinDate.getTime()) / (1000 * 60 * 60 * 24);
 
       if (daysSinceJoin >= config.eligibleDays) {
-  await interaction.editReply({
-    embeds: [
-      buildVerifiedEmbed({
-        robloxUsername: resolved.username,
-        displayName: resolved.displayName,
-        userId: resolved.userId,
-        avatarUrl,
-        joinDate: membership.joinDate,
-      }),
-    ],
-  });
-} else {
-  await interaction.editReply({
-    embeds: [
-      buildUnverifiedEmbed({
-        robloxUsername: resolved.username,
-        displayName: resolved.displayName,
-        userId: resolved.userId,
-        avatarUrl,
-        joinDate: membership.joinDate,
-        eligibleDays: config.eligibleDays,
-      }),
-    ],
-  });
-}
+        await interaction.editReply({
+          embeds: [
+            buildVerifiedEmbed({
+              robloxUsername: resolved.username,
+              displayName: resolved.displayName,
+              userId: resolved.userId,
+              avatarUrl,
+              joinDate: membership.joinDate,
+              guildIconUrl,
+              botAvatarUrl,
+            }),
+          ],
+        });
+      } else {
+        await interaction.editReply({
+          embeds: [
+            buildUnverifiedEmbed({
+              robloxUsername: resolved.username,
+              displayName: resolved.displayName,
+              userId: resolved.userId,
+              avatarUrl,
+              joinDate: membership.joinDate,
+              eligibleDays: config.eligibleDays,
+              guildIconUrl,
+              botAvatarUrl,
+            }),
+          ],
+        });
+      }
     } catch (err) {
       console.error(`[Command /eligible] Gagal memproses username "${inputUsername}":`, err);
-      await interaction.editReply({ embeds: [buildErrorEmbed()] });
+      await interaction.editReply({ embeds: [buildErrorEmbed({ botAvatarUrl })] });
     }
   },
 };
