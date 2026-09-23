@@ -13,6 +13,8 @@ const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
 const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
+const { syncFromResult } = require('./src/services/watchlistStore');
+const { startWatchlistScheduler } = require('./src/services/watchlistScheduler');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
@@ -31,6 +33,8 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Bot] Login berhasil sebagai ${readyClient.user.tag}`);
   console.log(`[Bot] Memantau komunitas Roblox group ID: ${config.robloxGroupId}`);
   console.log(`[Bot] Ambang batas eligible: ${config.eligibleDays} hari`);
+
+  startWatchlistScheduler(readyClient);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -70,8 +74,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const botAvatarUrl = interaction.client.user.displayAvatarURL({ size: 128 });
 
       await interaction.deferReply();
-      const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
+      const { embed, result } = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
       await interaction.editReply({ embeds: [embed] });
+
+      syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
       scheduleStickyRepost(client, interaction.channelId);
       return;
