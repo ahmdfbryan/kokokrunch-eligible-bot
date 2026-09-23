@@ -1,63 +1,43 @@
-const { readStickyPanel, writeStickyPanel } = require('./stickyPanelStore');
+const fs = require('fs');
+const path = require('path');
 
-const STICKY_REPOST_DEBOUNCE_MS = 1500;
-const stickyRepostTimers = new Map();
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const STORE_PATH = path.join(DATA_DIR, 'sticky-panel.json');
 
-let panelPayloadBuilder = null;
-
-/**
- * Wajib dipanggil sekali saat startup (di index.js) supaya modul ini tahu
- * cara membangun ulang isi panel (embed + tombol) saat repost.
- */
-function registerPanelPayloadBuilder(builderFn) {
-  panelPayloadBuilder = builderFn;
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
 }
 
-async function repostStickyPanel(client, channelId) {
-  const sticky = readStickyPanel();
-  if (!sticky || sticky.channelId !== channelId) return;
-  if (!panelPayloadBuilder) return;
-
+function readStickyPanel() {
   try {
-    const channel = await client.channels.fetch(channelId);
-    if (!channel || !channel.isTextBased()) return;
-
-    try {
-      const oldMessage = await channel.messages.fetch(sticky.messageId);
-      await oldMessage.delete();
-    } catch (err) {
-      console.warn(`[StickyPanel] Tidak bisa hapus panel lama (${sticky.messageId}): ${err.message}`);
-    }
-
-    const newMessage = await channel.send(panelPayloadBuilder());
-    writeStickyPanel({ channelId, messageId: newMessage.id });
+    if (!fs.existsSync(STORE_PATH)) return null;
+    const raw = fs.readFileSync(STORE_PATH, 'utf8');
+    const data = JSON.parse(raw);
+    if (!data?.channelId || !data?.messageId) return null;
+    return data;
   } catch (err) {
-    console.error(`[StickyPanel] Gagal repost panel di channel ${channelId}:`, err);
+    console.error('[StickyPanel] Gagal membaca data/sticky-panel.json:', err);
+    return null;
   }
 }
 
-/**
- * Jadwalkan repost (dengan debounce). Dipakai oleh:
- * 1. Listener pesan baru di index.js (saat ada chat biasa dari user/bot lain)
- * 2. Dipanggil manual tepat setelah bot kirim hasil pengecekan eligibility
- *    (dari /eligible ATAU dari tombol "Cek Akun Anda"), supaya panel ikut
- *    "turun" ke bawah hasil itu juga -- tanpa perlu mendeteksi pesan bot
- *    sendiri lewat event listener (yang riskan infinite-loop).
- */
-function scheduleStickyRepost(client, channelId) {
-  const sticky = readStickyPanel();
-  if (!sticky || sticky.channelId !== channelId) return;
-
-  if (stickyRepostTimers.has(channelId)) {
-    clearTimeout(stickyRepostTimers.get(channelId));
+function writeStickyPanel({ channelId, messageId }) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(STORE_PATH, JSON.stringify({ channelId, messageId }, null, 2));
+  } catch (err) {
+    console.error('[StickyPanel] Gagal menyimpan data/sticky-panel.json:', err);
   }
-  const timer = setTimeout(() => {
-    stickyRepostTimers.delete(channelId);
-    repostStickyPanel(client, channelId).catch((err) =>
-      console.error('[StickyPanel] Unhandled error saat repost:', err)
-    );
-  }, STICKY_REPOST_DEBOUNCE_MS);
-  stickyRepostTimers.set(channelId, timer);
 }
 
-module.exports = { registerPanelPayloadBuilder, scheduleStickyRepost };
+function clearStickyPanel() {
+  try {
+    if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
+  } catch (err) {
+    console.error('[StickyPanel] Gagal menghapus data/sticky-panel.json:', err);
+  }
+}
+
+module.exports = { readStickyPanel, writeStickyPanel, clearStickyPanel };
