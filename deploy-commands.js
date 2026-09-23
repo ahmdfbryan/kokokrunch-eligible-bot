@@ -1,21 +1,19 @@
 const { REST, Routes } = require('discord.js');
 const config = require('./src/config');
 const eligibleCommand = require('./src/commands/eligible');
+const panelCommand = require('./src/commands/panel');
 
-const commands = [eligibleCommand.data.toJSON()];
+const commands = [eligibleCommand.data.toJSON(), panelCommand.data.toJSON()];
 
 const rest = new REST().setToken(config.discordToken);
 
 (async () => {
   try {
     console.log(`[Deploy] Mendaftarkan ${commands.length} slash command...`);
-
     const route = config.discordGuildId
       ? Routes.applicationGuildCommands(config.discordClientId, config.discordGuildId)
       : Routes.applicationCommands(config.discordClientId);
-
     await rest.put(route, { body: commands });
-
     if (config.discordGuildId) {
       console.log(`[Deploy] Sukses! Command terdaftar khusus di guild ${config.discordGuildId} (instan).`);
     } else {
