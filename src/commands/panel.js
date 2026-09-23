@@ -17,7 +17,7 @@ function buildPanelPayload() {
     .setTitle('🔍 CEK STATUS AKUN')
     .setDescription(
       'Apabila belum bergabung ke komunitas, silakan join terlebih dahulu dan tunggu selama ' +
-      '**14 hari** hingga memenuhi syarat untuk melakukan order robux komunitas.'
+      '**14 hari** hingga memenuhi syarat untuk melakukan order robux di <#1538023963693678642>.'
     );
 
   const row = new ActionRowBuilder().addComponents(
