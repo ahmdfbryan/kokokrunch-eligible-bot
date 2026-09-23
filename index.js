@@ -109,9 +109,17 @@ async function repostStickyPanel(channelId) {
 }
 
 client.on(Events.MessageCreate, (message) => {
+  // Abaikan pesan dari bot ini sendiri (termasuk pesan panel hasil repost).
+  // PENTING: ini dicek berdasarkan siapa pengirimnya, BUKAN berdasarkan
+  // message ID yang tersimpan -- karena event pesan baru dari Discord kadang
+  // sampai lebih cepat daripada kita sempat menyimpan ID panel yang baru,
+  // yang sebelumnya bikin bot salah kira panel sendiri sebagai "pesan baru
+  // dari luar" lalu terus-menerus hapus & kirim ulang (makanya kelihatan
+  // "kedip"/muncul-hilang terus).
+  if (message.author.id === client.user.id) return;
+
   const sticky = readStickyPanel();
   if (!sticky || sticky.channelId !== message.channelId) return;
-  if (message.id === sticky.messageId) return;
 
   if (stickyRepostTimers.has(message.channelId)) {
     clearTimeout(stickyRepostTimers.get(message.channelId));
