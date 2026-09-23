@@ -8,11 +8,13 @@ const {
   buildErrorEmbed,
 } = require('../embeds');
 
-async function checkEligibilityEmbed(inputUsername) {
+async function checkEligibilityEmbed(inputUsername, context = {}) {
+  const { guildIconUrl, botAvatarUrl } = context;
+
   try {
     const resolved = await roblox.resolveUsername(inputUsername);
     if (!resolved) {
-      return buildUserNotFoundEmbed(inputUsername);
+      return buildUserNotFoundEmbed(inputUsername, { botAvatarUrl });
     }
 
     const [avatarUrl, membership] = await Promise.all([
@@ -21,24 +23,43 @@ async function checkEligibilityEmbed(inputUsername) {
     ]);
 
     if (!membership.isMember) {
-      return buildNotJoinedEmbed({ robloxUsername: resolved.username, avatarUrl });
+      return buildNotJoinedEmbed({
+        robloxUsername: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+        guildIconUrl,
+        botAvatarUrl,
+      });
     }
 
     const daysSinceJoin = (Date.now() - membership.joinDate.getTime()) / (1000 * 60 * 60 * 24);
 
     if (daysSinceJoin >= config.eligibleDays) {
-      return buildVerifiedEmbed({ robloxUsername: resolved.username, avatarUrl });
+      return buildVerifiedEmbed({
+        robloxUsername: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+        joinDate: membership.joinDate,
+        guildIconUrl,
+        botAvatarUrl,
+      });
     }
 
     return buildUnverifiedEmbed({
       robloxUsername: resolved.username,
+      displayName: resolved.displayName,
+      userId: resolved.userId,
       avatarUrl,
       joinDate: membership.joinDate,
       eligibleDays: config.eligibleDays,
+      guildIconUrl,
+      botAvatarUrl,
     });
   } catch (err) {
     console.error(`[Eligibility Check] Gagal memproses username "${inputUsername}":`, err);
-    return buildErrorEmbed();
+    return buildErrorEmbed({ botAvatarUrl });
   }
 }
 
