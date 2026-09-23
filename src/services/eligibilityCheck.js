@@ -10,7 +10,6 @@ const {
 
 async function checkEligibilityEmbed(inputUsername, context = {}) {
   const { guildIconUrl, botAvatarUrl } = context;
-
   try {
     const resolved = await roblox.resolveUsername(inputUsername);
     if (!resolved) {
