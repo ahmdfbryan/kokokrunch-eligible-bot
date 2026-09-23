@@ -12,12 +12,19 @@ const config = require('./src/config');
 const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
+const { readStickyPanel, writeStickyPanel } = require('./src/services/stickyPanelStore');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
 
+const STICKY_REPOST_DEBOUNCE_MS = 1500;
+const stickyRepostTimers = new Map();
+
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+  ],
 });
 
 client.commands = new Collection();
@@ -77,6 +84,45 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.reply(errorPayload).catch(() => {});
     }
   }
+});
+
+async function repostStickyPanel(channelId) {
+  const sticky = readStickyPanel();
+  if (!sticky || sticky.channelId !== channelId) return;
+
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) return;
+
+    try {
+      const oldMessage = await channel.messages.fetch(sticky.messageId);
+      await oldMessage.delete();
+    } catch (err) {
+      console.warn(`[StickyPanel] Tidak bisa hapus panel lama (${sticky.messageId}): ${err.message}`);
+    }
+
+    const newMessage = await channel.send(panelCommand.buildPanelPayload());
+    writeStickyPanel({ channelId, messageId: newMessage.id });
+  } catch (err) {
+    console.error(`[StickyPanel] Gagal repost panel di channel ${channelId}:`, err);
+  }
+}
+
+client.on(Events.MessageCreate, (message) => {
+  const sticky = readStickyPanel();
+  if (!sticky || sticky.channelId !== message.channelId) return;
+  if (message.id === sticky.messageId) return;
+
+  if (stickyRepostTimers.has(message.channelId)) {
+    clearTimeout(stickyRepostTimers.get(message.channelId));
+  }
+  const timer = setTimeout(() => {
+    stickyRepostTimers.delete(message.channelId);
+    repostStickyPanel(message.channelId).catch((err) =>
+      console.error('[StickyPanel] Unhandled error saat repost:', err)
+    );
+  }, STICKY_REPOST_DEBOUNCE_MS);
+  stickyRepostTimers.set(message.channelId, timer);
 });
 
 process.on('unhandledRejection', (reason) => {
