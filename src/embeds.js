@@ -23,14 +23,14 @@ function buildProgressBar(currentDays, totalDays, length = PROGRESS_BAR_LENGTH) 
 }
 
 function dividerField() {
-  return { name: '\u200b', value: '⎯'.repeat(38), inline: false };
+  return { name: '\u200b', value: '\u200b', inline: false };
 }
 
 function identityFields({ robloxUsername, displayName, userId }) {
   return [
-    { name: 'Username', value: `\`${robloxUsername}\``, inline: true },
-    { name: 'Display Name', value: `\`${displayName || robloxUsername}\``, inline: true },
-    { name: 'Roblox ID', value: `\`${userId}\``, inline: true },
+    { name: '👤 Username', value: `\`${robloxUsername}\``, inline: true },
+    { name: '🪪 Display Name', value: `\`${displayName || robloxUsername}\``, inline: true },
+    { name: '🆔 Roblox ID', value: `\`${userId}\``, inline: true },
   ];
 }
 
@@ -87,6 +87,7 @@ function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, jo
   const embed = baseEmbed({ color: COLOR_GREEN, guildIconUrl, botAvatarUrl })
     .setTitle('🟢 Eligible Verification')
     .setURL(robloxProfileUrl(userId))
+    .setDescription('🎉 **Selamat! Kamu sudah memenuhi syarat verifikasi komunitas.**')
     .addFields(...identityFields({ robloxUsername, displayName, userId }))
     .addFields(dividerField())
     .addFields(
