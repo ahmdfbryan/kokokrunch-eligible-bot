@@ -17,14 +17,10 @@ const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/ser
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
 
-// Kenalkan ke stickyPanelManager cara membangun ulang isi panel saat repost.
 registerPanelPayloadBuilder(panelCommand.buildPanelPayload);
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-  ],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
 
 client.commands = new Collection();
@@ -77,7 +73,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
       await interaction.editReply({ embeds: [embed] });
 
-      // Panel ikut "turun" ke bawah hasil pengecekan ini.
       scheduleStickyRepost(client, interaction.channelId);
       return;
     }
@@ -93,13 +88,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.on(Events.MessageCreate, (message) => {
-  // Abaikan pesan dari bot ini sendiri -- termasuk pesan panel hasil repost
-  // ITU SENDIRI (mencegah infinite loop). Hasil pengecekan eligibility dari
-  // /eligible & tombol "Cek Akun Anda" sengaja TIDAK ditangani lewat sini,
-  // tapi dipicu manual (lihat scheduleStickyRepost di eligible.js & di atas)
-  // supaya tidak perlu menebak-nebak lewat event ini.
   if (message.author.id === client.user.id) return;
-
   scheduleStickyRepost(client, message.channelId);
 });
 
