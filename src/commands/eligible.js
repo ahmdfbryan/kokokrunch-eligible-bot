@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { checkEligibilityEmbed } = require('../services/eligibilityCheck');
 const { scheduleStickyRepost } = require('../services/stickyPanelManager');
+const { syncFromResult } = require('../services/watchlistStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,8 +20,10 @@ module.exports = {
     const botAvatarUrl = interaction.client.user.displayAvatarURL({ size: 128 });
 
     await interaction.deferReply();
-    const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
+    const { embed, result } = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
     await interaction.editReply({ embeds: [embed] });
+
+    syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
     scheduleStickyRepost(interaction.client, interaction.channelId);
   },
