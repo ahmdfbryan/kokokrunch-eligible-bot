@@ -47,7 +47,6 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.reply(buildPanelPayload());
-
     const sentMessage = await interaction.fetchReply();
     writeStickyPanel({ channelId: sentMessage.channelId, messageId: sentMessage.id });
   },
