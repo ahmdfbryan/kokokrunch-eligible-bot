@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { checkEligibilityEmbed } = require('../services/eligibilityCheck');
+const { scheduleStickyRepost } = require('../services/stickyPanelManager');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,5 +23,8 @@ module.exports = {
 
     const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
     await interaction.editReply({ embeds: [embed] });
+
+    // Panel ikut "turun" ke bawah hasil /eligible ini juga.
+    scheduleStickyRepost(interaction.client, interaction.channelId);
   },
 };
