@@ -50,7 +50,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const usernameInput = new TextInputBuilder()
         .setCustomId(CHECK_ACCOUNT_USERNAME_INPUT_ID)
         .setLabel('Username Roblox kamu')
-        .setPlaceholder('Contoh: ahmdfbryan')
+        .setPlaceholder('Contoh: usernamekamu')
         .setStyle(TextInputStyle.Short)
         .setMinLength(3)
         .setMaxLength(50)
