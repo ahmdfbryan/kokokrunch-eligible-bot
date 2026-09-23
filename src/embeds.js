@@ -3,7 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 const COLOR_RED = 0xed4245;
 const COLOR_ORANGE = 0xffa500;
 const COLOR_GREEN = 0x57f287;
-const AUTHOR_NAME = 'KokoKrunch Studios — Community Verification';
+const AUTHOR_NAME = 'KokoKrunch Studios';
 const FOOTER_TEXT = 'Automated Verification System';
 const PROGRESS_BAR_LENGTH = 14;
 
