@@ -12,13 +12,13 @@ const config = require('./src/config');
 const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
-const { readStickyPanel, writeStickyPanel } = require('./src/services/stickyPanelStore');
+const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
 
-const STICKY_REPOST_DEBOUNCE_MS = 1500;
-const stickyRepostTimers = new Map();
+// Kenalkan ke stickyPanelManager cara membangun ulang isi panel saat repost.
+registerPanelPayloadBuilder(panelCommand.buildPanelPayload);
 
 const client = new Client({
   intents: [
@@ -65,7 +65,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-        if (interaction.isModalSubmit() && interaction.customId === CHECK_ACCOUNT_MODAL_ID) {
+    if (interaction.isModalSubmit() && interaction.customId === CHECK_ACCOUNT_MODAL_ID) {
       const inputUsername = interaction.fields
         .getTextInputValue(CHECK_ACCOUNT_USERNAME_INPUT_ID)
         .trim();
@@ -76,6 +76,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.deferReply();
       const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
       await interaction.editReply({ embeds: [embed] });
+
+      // Panel ikut "turun" ke bawah hasil pengecekan ini.
+      scheduleStickyRepost(client, interaction.channelId);
       return;
     }
   } catch (err) {
@@ -89,51 +92,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-async function repostStickyPanel(channelId) {
-  const sticky = readStickyPanel();
-  if (!sticky || sticky.channelId !== channelId) return;
-
-  try {
-    const channel = await client.channels.fetch(channelId);
-    if (!channel || !channel.isTextBased()) return;
-
-    try {
-      const oldMessage = await channel.messages.fetch(sticky.messageId);
-      await oldMessage.delete();
-    } catch (err) {
-      console.warn(`[StickyPanel] Tidak bisa hapus panel lama (${sticky.messageId}): ${err.message}`);
-    }
-
-    const newMessage = await channel.send(panelCommand.buildPanelPayload());
-    writeStickyPanel({ channelId, messageId: newMessage.id });
-  } catch (err) {
-    console.error(`[StickyPanel] Gagal repost panel di channel ${channelId}:`, err);
-  }
-}
-
 client.on(Events.MessageCreate, (message) => {
-  // Abaikan pesan dari bot ini sendiri (termasuk pesan panel hasil repost).
-  // PENTING: ini dicek berdasarkan siapa pengirimnya, BUKAN berdasarkan
-  // message ID yang tersimpan -- karena event pesan baru dari Discord kadang
-  // sampai lebih cepat daripada kita sempat menyimpan ID panel yang baru,
-  // yang sebelumnya bikin bot salah kira panel sendiri sebagai "pesan baru
-  // dari luar" lalu terus-menerus hapus & kirim ulang (makanya kelihatan
-  // "kedip"/muncul-hilang terus).
+  // Abaikan pesan dari bot ini sendiri -- termasuk pesan panel hasil repost
+  // ITU SENDIRI (mencegah infinite loop). Hasil pengecekan eligibility dari
+  // /eligible & tombol "Cek Akun Anda" sengaja TIDAK ditangani lewat sini,
+  // tapi dipicu manual (lihat scheduleStickyRepost di eligible.js & di atas)
+  // supaya tidak perlu menebak-nebak lewat event ini.
   if (message.author.id === client.user.id) return;
 
-  const sticky = readStickyPanel();
-  if (!sticky || sticky.channelId !== message.channelId) return;
-
-  if (stickyRepostTimers.has(message.channelId)) {
-    clearTimeout(stickyRepostTimers.get(message.channelId));
-  }
-  const timer = setTimeout(() => {
-    stickyRepostTimers.delete(message.channelId);
-    repostStickyPanel(message.channelId).catch((err) =>
-      console.error('[StickyPanel] Unhandled error saat repost:', err)
-    );
-  }, STICKY_REPOST_DEBOUNCE_MS);
-  stickyRepostTimers.set(message.channelId, timer);
+  scheduleStickyRepost(client, message.channelId);
 });
 
 process.on('unhandledRejection', (reason) => {
