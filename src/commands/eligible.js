@@ -14,8 +14,13 @@ module.exports = {
 
   async execute(interaction) {
     const inputUsername = interaction.options.getString('username', true).trim();
+
+    const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
+    const botAvatarUrl = interaction.client.user.displayAvatarURL({ size: 128 });
+
     await interaction.deferReply();
-    const embed = await checkEligibilityEmbed(inputUsername);
+
+    const embed = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
     await interaction.editReply({ embeds: [embed] });
   },
 };
