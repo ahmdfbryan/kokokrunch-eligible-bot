@@ -57,15 +57,18 @@ async function processEntry(client, entry) {
   }
 }
 
+function runCheckCycle(client) {
+  const entries = listWatchlist();
+  entries.forEach((entry) => {
+    processEntry(client, entry).catch((err) =>
+      console.error('[Watchlist] Unhandled error saat proses entry:', err)
+    );
+  });
+}
+
 function startWatchlistScheduler(client) {
-  setInterval(() => {
-    const entries = listWatchlist();
-    entries.forEach((entry) => {
-      processEntry(client, entry).catch((err) =>
-        console.error('[Watchlist] Unhandled error saat proses entry:', err)
-      );
-    });
-  }, CHECK_INTERVAL_MS);
+  runCheckCycle(client); // langsung cek begitu bot nyala/restart, tidak perlu nunggu 1 jam pertama
+  setInterval(() => runCheckCycle(client), CHECK_INTERVAL_MS);
 
   console.log(`[Watchlist] Scheduler aktif, cek ulang setiap ${CHECK_INTERVAL_MS / 60000} menit.`);
 }
