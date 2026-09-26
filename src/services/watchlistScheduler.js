@@ -1,6 +1,7 @@
 const roblox = require('../roblox');
 const { buildAutoNotificationEmbed } = require('../embeds');
 const { listWatchlist, removeEntry } = require('./watchlistStore');
+const { scheduleStickyRepost } = require('./stickyPanelManager');
 
 // Cek daftar pantauan tiap 1 jam. Kita TIDAK panggil API Roblox untuk semua
 // entry setiap kali -- waktu "eligibleAt" sudah bisa dihitung langsung dari
@@ -43,6 +44,7 @@ async function processEntry(client, entry) {
 
       const mention = entry.discordUserId ? `<@${entry.discordUserId}>` : '';
       await channel.send({ content: mention || undefined, embeds: [embed] });
+      scheduleStickyRepost(client, entry.channelId);
     } else {
       console.warn(`[Watchlist] Channel ${entry.channelId} tidak ditemukan/tidak bisa dikirimi pesan, notif dilewati.`);
     }
