@@ -1,5 +1,5 @@
 const roblox = require('../roblox');
-const { buildVerifiedEmbed } = require('../embeds');
+const { buildAutoNotificationEmbed } = require('../embeds');
 const { listWatchlist, removeEntry } = require('./watchlistStore');
 
 // Cek daftar pantauan tiap 1 jam. Kita TIDAK panggil API Roblox untuk semua
@@ -31,7 +31,7 @@ async function processEntry(client, entry) {
       const botAvatarUrl = client.user.displayAvatarURL({ size: 128 });
       const guildIconUrl = channel.guild?.iconURL({ size: 128 }) || null;
 
-      const embed = buildVerifiedEmbed({
+      const embed = buildAutoNotificationEmbed({
         robloxUsername: entry.robloxUsername,
         displayName: entry.displayName,
         userId: entry.robloxUserId,
@@ -41,11 +41,8 @@ async function processEntry(client, entry) {
         botAvatarUrl,
       });
 
-      const mention = entry.discordUserId ? `<@${entry.discordUserId}> ` : '';
-      await channel.send({
-        content: `${mention}Selamat, akun Roblox kamu sekarang sudah eligible untuk order robux komunitas! 🎉`,
-        embeds: [embed],
-      });
+      const mention = entry.discordUserId ? `<@${entry.discordUserId}>` : '';
+      await channel.send({ content: mention || undefined, embeds: [embed] });
     } else {
       console.warn(`[Watchlist] Channel ${entry.channelId} tidak ditemukan/tidak bisa dikirimi pesan, notif dilewati.`);
     }
