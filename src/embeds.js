@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 const COLOR_RED = 0xed4245;
 const COLOR_ORANGE = 0xffa500;
 const COLOR_GREEN = 0x57f287;
+const COLOR_GOLD = 0xf1c40f;
 const AUTHOR_NAME = 'KokoKrunch Studios';
 const FOOTER_TEXT = 'Automated Verification System';
 const PROGRESS_BAR_LENGTH = 14;
@@ -82,7 +83,7 @@ function buildUnverifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, 
   return embed;
 }
 
-/** Kondisi 3: member dan sudah >= N hari -> lolos verifikasi */
+/** Kondisi 3: member dan sudah >= N hari -> lolos verifikasi (hasil cek manual /eligible) */
 function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, joinDate, guildIconUrl, botAvatarUrl }) {
   const embed = baseEmbed({ color: COLOR_GREEN, guildIconUrl, botAvatarUrl })
     .setTitle('🟢 Eligible Verification')
@@ -94,6 +95,43 @@ function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, jo
       { name: 'Bergabung Sejak', value: `<t:${toUnixSeconds(joinDate)}:F>`, inline: false },
       { name: 'Status', value: '✅ Verified Community Member\n✅ Ready For Payout', inline: false }
     );
+  if (avatarUrl) embed.setThumbnail(avatarUrl);
+  return embed;
+}
+
+/** Notifikasi khusus dari watchlist scheduler -- terpisah dari hasil /eligible manual */
+function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avatarUrl, joinDate, guildIconUrl, botAvatarUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(COLOR_GOLD)
+    .setFooter({ text: 'Sistem Pemantauan Otomatis', iconURL: botAvatarUrl || undefined })
+    .setTimestamp();
+
+  if (guildIconUrl) {
+    embed.setAuthor({ name: '🔔 KokoKrunch Studios — Notifikasi Otomatis', iconURL: guildIconUrl });
+  } else {
+    embed.setAuthor({ name: '🔔 KokoKrunch Studios — Notifikasi Otomatis' });
+  }
+
+  embed
+    .setTitle('🎉 Verifikasi Otomatis Berhasil!')
+    .setURL(robloxProfileUrl(userId))
+    .setDescription(
+      'Sistem baru saja mendeteksi bahwa akun kamu telah **memenuhi syarat 14 hari** ' +
+      'sejak bergabung ke komunitas. Kamu sekarang bisa langsung melakukan **order robux komunitas**. 🎊'
+    )
+    .addFields(...identityFields({ robloxUsername, displayName, userId }))
+    .addFields(dividerField())
+    .addFields(
+      { name: 'Bergabung Sejak', value: `<t:${toUnixSeconds(joinDate)}:F>`, inline: true },
+      { name: 'Terverifikasi Pada', value: `<t:${toUnixSeconds(new Date())}:F>`, inline: true }
+    )
+    .addFields(dividerField())
+    .addFields({
+      name: 'Status',
+      value: '✅ Verified Community Member\n✅ Ready For Payout\n📦 Silakan lanjut order robux komunitas',
+      inline: false,
+    });
+
   if (avatarUrl) embed.setThumbnail(avatarUrl);
   return embed;
 }
@@ -117,6 +155,7 @@ module.exports = {
   buildNotJoinedEmbed,
   buildUnverifiedEmbed,
   buildVerifiedEmbed,
+  buildAutoNotificationEmbed,
   buildUserNotFoundEmbed,
   buildErrorEmbed,
 };
