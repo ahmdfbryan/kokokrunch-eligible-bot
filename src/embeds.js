@@ -100,10 +100,10 @@ function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, jo
 }
 
 /** Notifikasi khusus dari watchlist scheduler -- terpisah dari hasil /eligible manual */
-function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avatarUrl, joinDate, guildIconUrl, botAvatarUrl }) {
+function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avatarUrl, guildIconUrl, botAvatarUrl }) {
   const embed = new EmbedBuilder()
     .setColor(COLOR_GOLD)
-    .setFooter({ text: 'Sistem Pemantauan Otomatis', iconURL: botAvatarUrl || undefined })
+    .setFooter({ text: 'Automated Verification System', iconURL: botAvatarUrl || undefined })
     .setTimestamp();
 
   if (guildIconUrl) {
@@ -117,20 +117,9 @@ function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avata
     .setURL(robloxProfileUrl(userId))
     .setDescription(
       'Sistem baru saja mendeteksi bahwa akun kamu telah **memenuhi syarat 14 hari** ' +
-      'sejak bergabung ke komunitas. Kamu sekarang bisa langsung melakukan **order robux komunitas**. 🎊'
+      'sejak bergabung ke komunitas. Kamu sekarang sudah bisa melakukan **order robux komunitas**. 🎊'
     )
-    .addFields(...identityFields({ robloxUsername, displayName, userId }))
-    .addFields(dividerField())
-    .addFields(
-      { name: 'Bergabung Sejak', value: `<t:${toUnixSeconds(joinDate)}:F>`, inline: true },
-      { name: 'Terverifikasi Pada', value: `<t:${toUnixSeconds(new Date())}:F>`, inline: true }
-    )
-    .addFields(dividerField())
-    .addFields({
-      name: 'Status',
-      value: '✅ Verified Community Member\n✅ Ready For Payout\n📦 Silakan lanjut order robux komunitas',
-      inline: false,
-    });
+    .addFields(...identityFields({ robloxUsername, displayName, userId }));
 
   if (avatarUrl) embed.setThumbnail(avatarUrl);
   return embed;
