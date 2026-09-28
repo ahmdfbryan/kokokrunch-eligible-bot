@@ -53,12 +53,7 @@ function buildNotJoinedEmbed({ robloxUsername, displayName, userId, avatarUrl, g
   const embed = baseEmbed({ color: COLOR_RED, guildIconUrl, botAvatarUrl })
     .setTitle('🔴 Belum Terdeteksi Join Komunitas')
     .setURL(robloxProfileUrl(userId))
-    .addFields(...identityFields({ robloxUsername, displayName, userId }))
-    .addFields(dividerField())
-    .addFields({
-      name: 'Status',
-      value: '❌ Belum tergabung di komunitas KokoKrunch Studios.\nSilakan join terlebih dahulu melalui tombol link komunitas.',
-    });
+    .addFields(...identityFields({ robloxUsername, displayName, userId }));
   if (avatarUrl) embed.setThumbnail(avatarUrl);
   return embed;
 }
@@ -103,7 +98,7 @@ function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, jo
 function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avatarUrl, guildIconUrl, botAvatarUrl }) {
   const embed = new EmbedBuilder()
     .setColor(COLOR_GOLD)
-    .setFooter({ text: 'Automated Verification System', iconURL: botAvatarUrl || undefined })
+    .setFooter({ text: 'Sistem Pemantauan Otomatis', iconURL: botAvatarUrl || undefined })
     .setTimestamp();
 
   if (guildIconUrl) {
@@ -117,7 +112,7 @@ function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avata
     .setURL(robloxProfileUrl(userId))
     .setDescription(
       'Sistem baru saja mendeteksi bahwa akun kamu telah **memenuhi syarat 14 hari** ' +
-      'sejak bergabung ke komunitas. Kamu sekarang sudah bisa melakukan **order robux komunitas**. 🎊'
+      'sejak bergabung ke komunitas. Kamu sekarang bisa langsung melakukan **order robux komunitas**. 🎊'
     )
     .addFields(...identityFields({ robloxUsername, displayName, userId }));
 
