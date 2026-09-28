@@ -75,7 +75,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await interaction.deferReply();
       const { embed, result } = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
-      await interaction.editReply({ embeds: [embed] });
+      const components = result?.status === 'not_joined' ? [panelCommand.buildCommunityLinkRow()] : [];
+      await interaction.editReply({ embeds: [embed], components });
 
       syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
