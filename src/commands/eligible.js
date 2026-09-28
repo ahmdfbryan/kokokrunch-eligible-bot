@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { checkEligibilityEmbed } = require('../services/eligibilityCheck');
 const { scheduleStickyRepost } = require('../services/stickyPanelManager');
 const { syncFromResult } = require('../services/watchlistStore');
+const { buildCommunityLinkRow } = require('./panel');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -21,7 +22,8 @@ module.exports = {
 
     await interaction.deferReply();
     const { embed, result } = await checkEligibilityEmbed(inputUsername, { guildIconUrl, botAvatarUrl });
-    await interaction.editReply({ embeds: [embed] });
+    const components = result?.status === 'not_joined' ? [buildCommunityLinkRow()] : [];
+    await interaction.editReply({ embeds: [embed], components });
 
     syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
