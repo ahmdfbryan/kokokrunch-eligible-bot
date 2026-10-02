@@ -101,10 +101,10 @@ function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avata
     .setFooter({ text: 'Sistem Pemantauan Otomatis', iconURL: botAvatarUrl || undefined })
     .setTimestamp();
 
-  if (guildIconUrl) {
-    embed.setAuthor({ name: '🔔 KokoKrunch Studios — Notifikasi Otomatis', iconURL: guildIconUrl });
+    if (guildIconUrl) {
+    embed.setAuthor({ name: '🔔 KokoKrunch Studios', iconURL: guildIconUrl });
   } else {
-    embed.setAuthor({ name: '🔔 KokoKrunch Studios — Notifikasi Otomatis' });
+    embed.setAuthor({ name: '🔔 KokoKrunch Studios' });
   }
 
   embed
