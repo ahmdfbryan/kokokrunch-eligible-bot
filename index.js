@@ -11,6 +11,7 @@ const {
 const config = require('./src/config');
 const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
+const panelRoleMlbbCommand = require('./src/commands/panelRoleMlbb');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
 const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
 const { syncFromResult } = require('./src/services/watchlistStore');
@@ -28,6 +29,7 @@ const client = new Client({
 client.commands = new Collection();
 client.commands.set(eligibleCommand.data.name, eligibleCommand);
 client.commands.set(panelCommand.data.name, panelCommand);
+client.commands.set(panelRoleMlbbCommand.data.name, panelRoleMlbbCommand);
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Bot] Login berhasil sebagai ${readyClient.user.tag}`);
@@ -81,6 +83,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
       syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
       scheduleStickyRepost(client, interaction.channelId);
+      return;
+    }
+
+    // --- Klik tombol "Ambil / Lepas Role MLBB" -> toggle role milik member yang klik ---
+    if (interaction.isButton() && interaction.customId === panelRoleMlbbCommand.TOGGLE_ROLE_BUTTON_ID) {
+      const roleId = panelRoleMlbbCommand.MLBB_ROLE_ID;
+      const member = interaction.member;
+      const hasRole = member.roles.cache.has(roleId);
+
+      if (hasRole) {
+        await member.roles.remove(roleId);
+        await interaction.reply({ content: '✅ Role Mobile Legend berhasil dilepas.', ephemeral: true });
+      } else {
+        await member.roles.add(roleId);
+        await interaction.reply({ content: '✅ Role Mobile Legend berhasil ditambahkan!', ephemeral: true });
+      }
       return;
     }
   } catch (err) {
