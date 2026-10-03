@@ -35,40 +35,40 @@ if (config.roleGameFreefireId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_FREEFIRE_BUTTON_ID]
 if (config.roleGamePubgId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_PUBG_BUTTON_ID] = config.roleGamePubgId;
 if (config.roleGameMlbbId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_MLBB_BUTTON_ID] = config.roleGameMlbbId;
 
-function buildGenderPayload() {
+const PANEL_COLOR = 0x3b1f1f; // nuansa maroon gelap, sesuai referensi
+const FOOTER_NOTE_TEXT =
+  '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
+  '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
+  '**KokoKrunch Studios**';
+
+function buildFooterNoteEmbed() {
+  return new EmbedBuilder().setColor(PANEL_COLOR).setDescription(FOOTER_NOTE_TEXT);
+}
+
+// --- Gender Selection ---
+function buildGenderPrimaryPayload() {
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setTitle('👤 GENDER SELECTION')
-    .setDescription(
-      'Silakan klik tombol di bawah ini untuk mengambil role sesuai gender kamu.\n\n' +
-      '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
-      '**KokoKrunch Studios**'
-    );
+    .setColor(PANEL_COLOR)
+    .setTitle('🚻 GENDER SELECTION')
+    .setDescription('Silakan klik tombol di bawah ini untuk mengambil role.');
 
   const row = new ActionRowBuilder();
   if (config.roleMaleId) {
-    row.addComponents(
-      new ButtonBuilder().setCustomId(TOGGLE_MALE_BUTTON_ID).setLabel('Male').setEmoji('♂️').setStyle(ButtonStyle.Primary)
-    );
+    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_MALE_BUTTON_ID).setLabel('Male').setStyle(ButtonStyle.Secondary));
   }
   if (config.roleFemaleId) {
-    row.addComponents(
-      new ButtonBuilder().setCustomId(TOGGLE_FEMALE_BUTTON_ID).setLabel('Female').setEmoji('♀️').setStyle(ButtonStyle.Danger)
-    );
+    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_FEMALE_BUTTON_ID).setLabel('Female').setStyle(ButtonStyle.Secondary));
   }
 
   return { embeds: [embed], components: row.components.length ? [row] : [] };
 }
 
-function buildGamePayload() {
+// --- Game Selection ---
+function buildGamePrimaryPayload() {
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setTitle('🎮 GAME SELECTION')
-    .setDescription(
-      'Silakan klik tombol di bawah ini untuk mengambil role.\n\n' +
-      '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
-      '**KokoKrunch Studios**'
-    );
+    .setColor(PANEL_COLOR)
+    .setTitle('🧩 GAME SELECTION')
+    .setDescription('Silakan klik tombol di bawah ini untuk mengambil role.');
 
   const row = new ActionRowBuilder();
   if (config.roleGameRobloxId) {
@@ -87,7 +87,12 @@ function buildGamePayload() {
   return { embeds: [embed], components: row.components.length ? [row] : [] };
 }
 
-/** Dipanggil sekali saat bot ready. Kirim 2 pesan terpisah ke ROLE_PANEL_CHANNEL_ID, HANYA kalau belum pernah dikirim. */
+/**
+ * Dipanggil sekali saat bot ready. Kirim panel Gender lalu panel Game ke
+ * ROLE_PANEL_CHANNEL_ID, HANYA kalau belum pernah dikirim. Tiap panel terdiri
+ * dari 2 pesan beruntun (judul+tombol, lalu catatan+footer) supaya tampil
+ * menyatu sebagai 1 kartu, dengan tombol "di tengah", sesuai referensi.
+ */
 async function ensureRolePanelsPosted(client) {
   if (!config.rolePanelChannelId) return; // fitur tidak diaktifkan
   if (hasBeenSent()) return; // sudah pernah dikirim sebelumnya, jangan dobel
@@ -99,13 +104,17 @@ async function ensureRolePanelsPosted(client) {
       return;
     }
 
-    const genderMessage = await channel.send(buildGenderPayload());
-    const gameMessage = await channel.send(buildGamePayload());
+    const genderMain = await channel.send(buildGenderPrimaryPayload());
+    const genderFooter = await channel.send({ embeds: [buildFooterNoteEmbed()] });
+    const gameMain = await channel.send(buildGamePrimaryPayload());
+    const gameFooter = await channel.send({ embeds: [buildFooterNoteEmbed()] });
 
     markAsSent({
       channelId: config.rolePanelChannelId,
-      genderMessageId: genderMessage.id,
-      gameMessageId: gameMessage.id,
+      genderMainId: genderMain.id,
+      genderFooterId: genderFooter.id,
+      gameMainId: gameMain.id,
+      gameFooterId: gameFooter.id,
     });
 
     console.log('[RolePanel] Panel Gender & Game berhasil dikirim ke channel.');
