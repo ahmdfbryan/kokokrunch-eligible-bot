@@ -97,7 +97,7 @@ function buildGenderPrimaryPayload() {
 function buildGamePrimaryPayload() {
   const embed = new EmbedBuilder()
     .setColor(PANEL_COLOR)
-    .setTitle('🎮 GAME YANG KALIAN SUKA SELECTION')
+    .setTitle('🎮 GAME SELECTION')
     .setDescription(
       'Silakan klik tombol di bawah ini untuk mengambil role.\n\n' +
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
