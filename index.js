@@ -89,6 +89,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // --- Klik tombol Gender / Game -> toggle role milik member yang klik ---
     if (interaction.isButton() && rolePanel.ROLE_ID_BY_BUTTON[interaction.customId]) {
       const roleId = rolePanel.ROLE_ID_BY_BUTTON[interaction.customId];
+      const roleName = rolePanel.ROLE_LABEL_BY_BUTTON[interaction.customId];
       const member = interaction.member;
       const hasRole = member.roles.cache.has(roleId);
       const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
@@ -96,13 +97,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (hasRole) {
         await member.roles.remove(roleId);
         await interaction.reply({
-          embeds: [rolePanel.buildRoleToggleEmbed({ added: false, guildIconUrl })],
+          embeds: [rolePanel.buildRoleToggleEmbed({ added: false, guildIconUrl, roleName })],
           ephemeral: true,
         });
       } else {
         await member.roles.add(roleId);
         await interaction.reply({
-          embeds: [rolePanel.buildRoleToggleEmbed({ added: true, guildIconUrl })],
+          embeds: [rolePanel.buildRoleToggleEmbed({ added: true, guildIconUrl, roleName })],
           ephemeral: true,
         });
       }
