@@ -74,17 +74,34 @@ function buildGamePrimaryPayload() {
   if (config.roleGameRobloxId) {
     row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_ROBLOX_BUTTON_ID).setLabel('ROBLOX').setStyle(ButtonStyle.Secondary));
   }
-  if (config.roleGameFreefireId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_FREEFIRE_BUTTON_ID).setLabel('Free Fire').setStyle(ButtonStyle.Secondary));
+  if (config.roleGameMlbbId) {
+    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_MLBB_BUTTON_ID).setLabel('Mobile Legends').setStyle(ButtonStyle.Secondary));
   }
   if (config.roleGamePubgId) {
     row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_PUBG_BUTTON_ID).setLabel('PUBG').setStyle(ButtonStyle.Secondary));
   }
-  if (config.roleGameMlbbId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_MLBB_BUTTON_ID).setLabel('Mobile Legends').setStyle(ButtonStyle.Secondary));
+  if (config.roleGameFreefireId) {
+    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_FREEFIRE_BUTTON_ID).setLabel('Free Fire').setStyle(ButtonStyle.Secondary));
   }
 
   return { embeds: [embed], components: row.components.length ? [row] : [] };
+}
+
+// --- Embed "premium" untuk feedback saat tombol Gender/Game diklik ---
+// Thumbnail (logo KokoKrunch Studios) ditaruh di pojok kanan embed via setThumbnail.
+const ROLE_ADDED_COLOR = 0x57f287; // hijau
+const ROLE_REMOVED_COLOR = 0xed4245; // merah
+
+function buildRoleToggleEmbed({ added, guildIconUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(added ? ROLE_ADDED_COLOR : ROLE_REMOVED_COLOR)
+    .setAuthor({ name: 'KokoKrunch Studios', iconURL: guildIconUrl || undefined })
+    .setDescription(added ? '✅ **Role berhasil ditambahkan!**' : '🗑️ **Role berhasil dilepas.**')
+    .setTimestamp();
+
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
+
+  return embed;
 }
 
 /**
@@ -126,4 +143,5 @@ async function ensureRolePanelsPosted(client) {
 module.exports = {
   ROLE_ID_BY_BUTTON,
   ensureRolePanelsPosted,
+  buildRoleToggleEmbed,
 };
