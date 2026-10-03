@@ -11,7 +11,6 @@ const { writeStickyPanel } = require('../services/stickyPanelStore');
 const ROBLOX_COMMUNITY_URL = 'https://www.roblox.com/id/communities/625247444/KokoKrunch-Studios';
 const CHECK_ACCOUNT_BUTTON_ID = 'panel_cek_akun';
 
-/** Row tombol "Link Komunitas KokoKrunch" saja -- dipakai ulang di hasil "Belum Join". */
 function buildCommunityLinkRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
