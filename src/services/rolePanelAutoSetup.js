@@ -35,6 +35,16 @@ if (config.roleGameFreefireId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_FREEFIRE_BUTTON_ID]
 if (config.roleGamePubgId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_PUBG_BUTTON_ID] = config.roleGamePubgId;
 if (config.roleGameMlbbId) ROLE_ID_BY_BUTTON[TOGGLE_GAME_MLBB_BUTTON_ID] = config.roleGameMlbbId;
 
+// Nama tampilan tiap tombol -- dipakai untuk menyebut nama role di embed feedback.
+const ROLE_LABEL_BY_BUTTON = {
+  [TOGGLE_MALE_BUTTON_ID]: 'Male',
+  [TOGGLE_FEMALE_BUTTON_ID]: 'Female',
+  [TOGGLE_GAME_ROBLOX_BUTTON_ID]: 'ROBLOX',
+  [TOGGLE_GAME_MLBB_BUTTON_ID]: 'Mobile Legends',
+  [TOGGLE_GAME_PUBG_BUTTON_ID]: 'PUBG',
+  [TOGGLE_GAME_FREEFIRE_BUTTON_ID]: 'Free Fire',
+};
+
 const PANEL_COLOR = 0x3b1f1f; // nuansa maroon gelap, sesuai referensi
 const FOOTER_NOTE_TEXT =
   '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
@@ -89,14 +99,24 @@ function buildGamePrimaryPayload() {
 
 // --- Embed "premium" untuk feedback saat tombol Gender/Game diklik ---
 // Thumbnail (logo KokoKrunch Studios) ditaruh di pojok kanan embed via setThumbnail.
-const ROLE_ADDED_COLOR = 0x57f287; // hijau
-const ROLE_REMOVED_COLOR = 0xed4245; // merah
+const ROLE_ADDED_COLOR = 0x2ecc71; // hijau emerald
+const ROLE_REMOVED_COLOR = 0xe74c3c; // merah
 
-function buildRoleToggleEmbed({ added, guildIconUrl }) {
+function buildRoleToggleEmbed({ added, guildIconUrl, roleName }) {
+  const roleText = roleName ? `**${roleName}**` : 'role tersebut';
+
   const embed = new EmbedBuilder()
     .setColor(added ? ROLE_ADDED_COLOR : ROLE_REMOVED_COLOR)
-    .setAuthor({ name: 'KokoKrunch Studios', iconURL: guildIconUrl || undefined })
-    .setDescription(added ? '✅ **Role berhasil ditambahkan!**' : '🗑️ **Role berhasil dilepas.**')
+    .setAuthor({ name: '✨ KokoKrunch Studios', iconURL: guildIconUrl || undefined })
+    .setTitle(added ? '🎉 Role Berhasil Diaktifkan' : '👋 Role Berhasil Dinonaktifkan')
+    .setDescription(
+      added
+        ? `Selamat! Role ${roleText} kini resmi melekat di profil Discord kamu.\n\n` +
+          `> Klik tombol yang sama kapan saja untuk melepasnya.`
+        : `Role ${roleText} telah dilepas dari profil Discord kamu.\n\n` +
+          `> Klik tombol yang sama kapan saja untuk mengaktifkannya kembali.`
+    )
+    .setFooter({ text: 'KokoKrunch Studios • Role System', iconURL: guildIconUrl || undefined })
     .setTimestamp();
 
   if (guildIconUrl) embed.setThumbnail(guildIconUrl);
@@ -142,6 +162,7 @@ async function ensureRolePanelsPosted(client) {
 
 module.exports = {
   ROLE_ID_BY_BUTTON,
+  ROLE_LABEL_BY_BUTTON,
   ensureRolePanelsPosted,
   buildRoleToggleEmbed,
 };
