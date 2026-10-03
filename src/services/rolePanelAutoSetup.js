@@ -46,14 +46,14 @@ const ROLE_LABEL_BY_BUTTON = {
 };
 
 const PANEL_COLOR = 0x3b1f1f; // nuansa maroon gelap, sesuai referensi
+
+// Catatan ini dikirim sebagai PESAN TEKS BIASA (bukan embed) -- supaya tidak
+// punya kotak/border berwarna sendiri, sehingga menyatu mulus di bawah
+// panel embed di atasnya, tanpa terlihat seperti "2 kartu terpisah".
 const FOOTER_NOTE_TEXT =
   '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n' +
   '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
   '**KokoKrunch Studios**';
-
-function buildFooterNoteEmbed() {
-  return new EmbedBuilder().setColor(PANEL_COLOR).setDescription(FOOTER_NOTE_TEXT);
-}
 
 // --- Gender Selection ---
 function buildGenderPrimaryPayload() {
@@ -127,8 +127,9 @@ function buildRoleToggleEmbed({ added, guildIconUrl, roleName }) {
 /**
  * Dipanggil sekali saat bot ready. Kirim panel Gender lalu panel Game ke
  * ROLE_PANEL_CHANNEL_ID, HANYA kalau belum pernah dikirim. Tiap panel terdiri
- * dari 2 pesan beruntun (judul+tombol, lalu catatan+footer) supaya tampil
- * menyatu sebagai 1 kartu, dengan tombol "di tengah", sesuai referensi.
+ * dari 2 pesan beruntun (judul+tombol sebagai embed, lalu catatan+footer
+ * sebagai teks biasa) supaya tombol muncul "di tengah" dan tetap menyatu
+ * mulus tanpa terlihat seperti 2 kartu terpisah.
  */
 async function ensureRolePanelsPosted(client) {
   if (!config.rolePanelChannelId) return; // fitur tidak diaktifkan
@@ -142,9 +143,9 @@ async function ensureRolePanelsPosted(client) {
     }
 
     const genderMain = await channel.send(buildGenderPrimaryPayload());
-    const genderFooter = await channel.send({ embeds: [buildFooterNoteEmbed()] });
+    const genderFooter = await channel.send({ content: FOOTER_NOTE_TEXT });
     const gameMain = await channel.send(buildGamePrimaryPayload());
-    const gameFooter = await channel.send({ embeds: [buildFooterNoteEmbed()] });
+    const gameFooter = await channel.send({ content: FOOTER_NOTE_TEXT });
 
     markAsSent({
       channelId: config.rolePanelChannelId,
