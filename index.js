@@ -91,13 +91,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const roleId = rolePanel.ROLE_ID_BY_BUTTON[interaction.customId];
       const member = interaction.member;
       const hasRole = member.roles.cache.has(roleId);
+      const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
 
       if (hasRole) {
         await member.roles.remove(roleId);
-        await interaction.reply({ content: '✅ Role berhasil dilepas.', ephemeral: true });
+        await interaction.reply({
+          embeds: [rolePanel.buildRoleToggleEmbed({ added: false, guildIconUrl })],
+          ephemeral: true,
+        });
       } else {
         await member.roles.add(roleId);
-        await interaction.reply({ content: '✅ Role berhasil ditambahkan!', ephemeral: true });
+        await interaction.reply({
+          embeds: [rolePanel.buildRoleToggleEmbed({ added: true, guildIconUrl })],
+          ephemeral: true,
+        });
       }
       return;
     }
