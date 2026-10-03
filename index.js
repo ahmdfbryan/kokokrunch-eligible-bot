@@ -15,6 +15,7 @@ const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
 const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
 const { syncFromResult } = require('./src/services/watchlistStore');
 const { startWatchlistScheduler } = require('./src/services/watchlistScheduler');
+const rolePanel = require('./src/services/rolePanelAutoSetup');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
@@ -35,6 +36,7 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Bot] Ambang batas eligible: ${config.eligibleDays} hari`);
 
   startWatchlistScheduler(readyClient);
+  rolePanel.ensureRolePanelsPosted(readyClient);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -81,6 +83,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
       syncFromResult(result, { channelId: interaction.channelId, discordUserId: interaction.user.id });
 
       scheduleStickyRepost(client, interaction.channelId);
+      return;
+    }
+
+    // --- Klik tombol Gender / Game -> toggle role milik member yang klik ---
+    if (interaction.isButton() && rolePanel.ROLE_ID_BY_BUTTON[interaction.customId]) {
+      const roleId = rolePanel.ROLE_ID_BY_BUTTON[interaction.customId];
+      const member = interaction.member;
+      const hasRole = member.roles.cache.has(roleId);
+
+      if (hasRole) {
+        await member.roles.remove(roleId);
+        await interaction.reply({ content: '✅ Role berhasil dilepas.', ephemeral: true });
+      } else {
+        await member.roles.add(roleId);
+        await interaction.reply({ content: '✅ Role berhasil ditambahkan!', ephemeral: true });
+      }
       return;
     }
   } catch (err) {
