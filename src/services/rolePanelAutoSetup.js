@@ -60,41 +60,93 @@ function buildGenderPrimaryPayload() {
   const embed = new EmbedBuilder()
     .setColor(PANEL_COLOR)
     .setTitle('🚻 GENDER SELECTION')
-    .setDescription('Silakan klik tombol di bawah ini untuk mengambil role.');
+    .setDescription(
+      'Silakan klik tombol di bawah ini untuk mengambil role.\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+      '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
+      '**KokoKrunch Studios**'
+    );
 
   const row = new ActionRowBuilder();
+
   if (config.roleMaleId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_MALE_BUTTON_ID).setLabel('Male').setStyle(ButtonStyle.Secondary));
-  }
-  if (config.roleFemaleId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_FEMALE_BUTTON_ID).setLabel('Female').setStyle(ButtonStyle.Secondary));
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_MALE_BUTTON_ID)
+        .setLabel('Male')
+        .setStyle(ButtonStyle.Secondary)
+    );
   }
 
-  return { embeds: [embed], components: row.components.length ? [row] : [] };
+  if (config.roleFemaleId) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_FEMALE_BUTTON_ID)
+        .setLabel('Female')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  return {
+    embeds: [embed],
+    components: row.components.length ? [row] : [],
+  };
 }
 
 // --- Game Selection ---
 function buildGamePrimaryPayload() {
   const embed = new EmbedBuilder()
     .setColor(PANEL_COLOR)
-    .setTitle('🧩 GAME SELECTION')
-    .setDescription('Silakan klik tombol di bawah ini untuk mengambil role.');
+    .setTitle('🧩 GAME YANG KALIAN SUKA SELECTION')
+    .setDescription(
+      'Silakan klik tombol di bawah ini untuk mengambil role.\n\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+      '*Klik kembali untuk menghapus role yang sudah dimiliki.*\n\n' +
+      '**KokoKrunch Studios**'
+    );
 
-  const row = new ActionRowBuilder();
+  const row1 = new ActionRowBuilder();
+
   if (config.roleGameRobloxId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_ROBLOX_BUTTON_ID).setLabel('ROBLOX').setStyle(ButtonStyle.Secondary));
-  }
-  if (config.roleGameMlbbId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_MLBB_BUTTON_ID).setLabel('Mobile Legends').setStyle(ButtonStyle.Secondary));
-  }
-  if (config.roleGamePubgId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_PUBG_BUTTON_ID).setLabel('PUBG').setStyle(ButtonStyle.Secondary));
-  }
-  if (config.roleGameFreefireId) {
-    row.addComponents(new ButtonBuilder().setCustomId(TOGGLE_GAME_FREEFIRE_BUTTON_ID).setLabel('Free Fire').setStyle(ButtonStyle.Secondary));
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_GAME_ROBLOX_BUTTON_ID)
+        .setLabel('ROBLOX')
+        .setStyle(ButtonStyle.Secondary)
+    );
   }
 
-  return { embeds: [embed], components: row.components.length ? [row] : [] };
+  if (config.roleGameFreefireId) {
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_GAME_FREEFIRE_BUTTON_ID)
+        .setLabel('Free Fire')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  if (config.roleGamePubgId) {
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_GAME_PUBG_BUTTON_ID)
+        .setLabel('PUBG')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  if (config.roleGameMlbbId) {
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId(TOGGLE_GAME_MLBB_BUTTON_ID)
+        .setLabel('Mobile Legends')
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  return {
+    embeds: [embed],
+    components: row1.components.length ? [row1] : [],
+  };
 }
 
 // --- Embed "premium" untuk feedback saat tombol Gender/Game diklik ---
@@ -132,32 +184,45 @@ function buildRoleToggleEmbed({ added, guildIconUrl, roleName }) {
  * mulus tanpa terlihat seperti 2 kartu terpisah.
  */
 async function ensureRolePanelsPosted(client) {
-  if (!config.rolePanelChannelId) return; // fitur tidak diaktifkan
-  if (hasBeenSent()) return; // sudah pernah dikirim sebelumnya, jangan dobel
+  if (!config.rolePanelChannelId) return;
+  if (hasBeenSent()) return;
 
   try {
-    const channel = await client.channels.fetch(config.rolePanelChannelId);
+    const channel = await client.channels.fetch(
+      config.rolePanelChannelId
+    );
+
     if (!channel || !channel.isTextBased()) {
-      console.error(`[RolePanel] Channel ${config.rolePanelChannelId} tidak ditemukan/bukan text channel.`);
+      console.error(
+        `[RolePanel] Channel ${config.rolePanelChannelId} tidak ditemukan/bukan text channel.`
+      );
       return;
     }
 
-    const genderMain = await channel.send(buildGenderPrimaryPayload());
-    const genderFooter = await channel.send({ content: FOOTER_NOTE_TEXT });
-    const gameMain = await channel.send(buildGamePrimaryPayload());
-    const gameFooter = await channel.send({ content: FOOTER_NOTE_TEXT });
+    // 1 message = 1 embed + buttons
+    const genderMain = await channel.send(
+      buildGenderPrimaryPayload()
+    );
+
+    // 1 message = 1 embed + buttons
+    const gameMain = await channel.send(
+      buildGamePrimaryPayload()
+    );
 
     markAsSent({
       channelId: config.rolePanelChannelId,
       genderMainId: genderMain.id,
-      genderFooterId: genderFooter.id,
       gameMainId: gameMain.id,
-      gameFooterId: gameFooter.id,
     });
 
-    console.log('[RolePanel] Panel Gender & Game berhasil dikirim ke channel.');
+    console.log(
+      '[RolePanel] Panel Gender & Game berhasil dikirim ke channel.'
+    );
   } catch (err) {
-    console.error('[RolePanel] Gagal mengirim panel Gender/Game:', err);
+    console.error(
+      '[RolePanel] Gagal mengirim panel Gender/Game:',
+      err
+    );
   }
 }
 
