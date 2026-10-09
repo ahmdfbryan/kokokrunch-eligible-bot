@@ -460,4 +460,23 @@ async function handleCloseModalSubmit(interaction) {
   }
 
   setTimeout(() => {
-    interaction.channel.delete().catch((err) =>
+    interaction.channel.delete().catch((err) => {
+      console.error('[Store] Gagal menghapus channel ticket:', err);
+    });
+  }, 10_000);
+}
+
+module.exports = {
+  USERNAME_MODAL_PREFIX,
+  CONFIRM_YES_ID,
+  CONFIRM_NO_ID,
+  CLOSE_TICKET_BUTTON_ID,
+  CLOSE_SELECT_ID,
+  CLOSE_MODAL_PREFIX,
+  handleProductSelect,
+  handleUsernameModalSubmit,
+  handleConfirmButton,
+  handleCloseButton,
+  handleCloseSelect,
+  handleCloseModalSubmit,
+};
