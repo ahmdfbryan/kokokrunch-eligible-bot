@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { isStoreOpen, setStoreOpen } = require('../services/storeState');
+const { refreshStorePanels } = require('../services/storePanelRefresh');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -24,6 +25,10 @@ module.exports = {
         ? '🟢 Toko sekarang **BUKA**. Pembeli bisa memilih produk di panel Store.'
         : '🔴 Toko sekarang **TUTUP**. Pembeli tidak bisa memulai pembelian baru sampai toko dibuka kembali.',
       ephemeral: true,
+    });
+
+    refreshStorePanels(interaction.client).catch((err) => {
+      console.error('[Store] Gagal refresh panel Store:', err);
     });
   },
 };
