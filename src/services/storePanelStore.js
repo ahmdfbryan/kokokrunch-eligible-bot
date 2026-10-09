@@ -1,34 +1,49 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { isStoreOpen, setStoreOpen } = require('../services/storeState');
-const { refreshStorePanels } = require('../services/storePanelRefresh');
+const fs = require('fs');
+const path = require('path');
 
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('toko')
-    .setDescription('Buka atau tutup Store KokoKrunch')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addStringOption((option) =>
-      option
-        .setName('status')
-        .setDescription('Status toko')
-        .setRequired(true)
-        .addChoices({ name: 'Buka', value: 'open' }, { name: 'Tutup', value: 'close' })
-    ),
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const STORE_PATH = path.join(DATA_DIR, 'store-panels.json');
 
-  async execute(interaction) {
-    const status = interaction.options.getString('status', true);
-    setStoreOpen(status === 'open');
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
 
-    const nowOpen = isStoreOpen();
-    await interaction.reply({
-      content: nowOpen
-        ? '🟢 Toko sekarang **BUKA**. Pembeli bisa memilih produk di panel Store.'
-        : '🔴 Toko sekarang **TUTUP**. Pembeli tidak bisa memulai pembelian baru sampai toko dibuka kembali.',
-      ephemeral: true,
-    });
+/** Baca daftar semua panel Store yang pernah dikirim (bisa lebih dari 1 channel). */
+function getStorePanels() {
+  try {
+    if (!fs.existsSync(STORE_PATH)) return [];
+    const raw = fs.readFileSync(STORE_PATH, 'utf8');
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) return [];
+    return data.filter((p) => p?.channelId && p?.messageId);
+  } catch (err) {
+    console.error('[StorePanel] Gagal membaca data/store-panels.json:', err);
+    return [];
+  }
+}
 
-    refreshStorePanels(interaction.client).catch((err) => {
-      console.error('[Store] Gagal refresh panel Store:', err);
-    });
-  },
-};
+function writeStorePanels(panels) {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(STORE_PATH, JSON.stringify(panels, null, 2));
+  } catch (err) {
+    console.error('[StorePanel] Gagal menyimpan data/store-panels.json:', err);
+  }
+}
+
+/** Simpan referensi panel baru (atau timpa referensi lama di channel yang sama). */
+function addStorePanel({ channelId, messageId }) {
+  const panels = getStorePanels().filter((p) => p.channelId !== channelId);
+  panels.push({ channelId, messageId });
+  writeStorePanels(panels);
+}
+
+/** Hapus referensi panel (dipakai saat panel tidak ditemukan lagi / sudah dihapus). */
+function removeStorePanel(channelId) {
+  const panels = getStorePanels().filter((p) => p.channelId !== channelId);
+  writeStorePanels(panels);
+}
+
+module.exports = { getStorePanels, addStorePanel, removeStorePanel };
