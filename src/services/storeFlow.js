@@ -279,7 +279,8 @@ async function handleConfirmButton(interaction) {
 // ---------------------------------------------------------------------------
 async function createTicketChannel({ guild, buyerId, product, robloxUsername, robloxUserId, uniqueCode }) {
   const safeUsername = robloxUsername.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const channelName = `ticket-${safeUsername || buyerId}`.slice(0, 90);
+  const prefix = product.ticketPrefix || product.id;
+  const channelName = `ticket-${prefix}-${safeUsername || buyerId}`.slice(0, 90);
 
   const overwrites = [
     { id: guild.roles.everyone.id, type: OverwriteType.Role, deny: [PermissionFlagsBits.ViewChannel] },
