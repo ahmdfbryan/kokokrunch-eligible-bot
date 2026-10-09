@@ -11,6 +11,7 @@ const PRODUCTS = [
     label: 'Golden Pet',
     emoji: '🐾',
     description: 'Golden Pet eksklusif Mount Lonely.',
+    ticketPrefix: 'gold',
     get price() {
       return config.goldenPetPrice;
     },
@@ -23,6 +24,7 @@ const PRODUCTS = [
     emoji: '🔒',
     description: 'Produk ini belum tersedia saat ini.',
     price: null,
+    ticketPrefix: 'soon',
     requiresRobloxUsername: false,
     enabled: false,
   },
