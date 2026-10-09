@@ -42,13 +42,10 @@ function buildRobloxConfirmEmbed({ username, displayName, avatarUrl, productLabe
   const embed = new EmbedBuilder()
     .setColor(COLOR_INFO)
     .setTitle('🔍 Confirm Your Roblox Account')
-    .setDescription(
-      'Is this really your Roblox account?\n\n' +
-      `> Untuk pembelian **${productLabel}**.`
-    )
+    .setDescription('Is this really your Roblox account?')
     .addFields(
-      { name: '👤 Username', value: `\`${username}\``, inline: true },
-      { name: '🪪 Display Name', value: `\`${displayName || username}\``, inline: true }
+      { name: '👤 Username', value: username, inline: true },
+      { name: '🪪 Display Name', value: displayName || username, inline: true }
     )
     .setFooter({ text: 'KokoKrunch Studios • Store System' });
 
