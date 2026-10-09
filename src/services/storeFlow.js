@@ -473,6 +473,7 @@ async function handleCloseModalSubmit(interaction) {
       const logChannel = await interaction.client.channels.fetch(config.orderLogChannelId);
       if (logChannel && logChannel.isTextBased()) {
         await logChannel.send({
+          content: `<@${closedTicket.buyerId}>`,
           embeds: [
             buildOrderStatusEmbed({
               ticket: closedTicket,
