@@ -122,7 +122,6 @@ function buildOrderStatusEmbed({ ticket, closeStatus, note, closedByTag, guildIc
     .setDescription(meta.description)
     .addFields(
       { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true },
-      { name: '🛒 Pembeli', value: `<@${ticket.buyerId}>`, inline: true },
       { name: '👤 Akun Roblox', value: `\`${ticket.robloxUsername}\``, inline: true },
       { name: '📌 Status', value: `${meta.statusEmoji} ${meta.statusText}`, inline: true },
       { name: '📦 Produk', value: ticket.productLabel, inline: true },
