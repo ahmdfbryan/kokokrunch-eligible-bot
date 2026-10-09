@@ -11,11 +11,14 @@ const {
 const config = require('./src/config');
 const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
+const storePanelCommand = require('./src/commands/storePanel');
+const storeToggleCommand = require('./src/commands/storeToggle');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
 const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
 const { syncFromResult } = require('./src/services/watchlistStore');
 const { startWatchlistScheduler } = require('./src/services/watchlistScheduler');
 const rolePanel = require('./src/services/rolePanelAutoSetup');
+const storeFlow = require('./src/services/storeFlow');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
@@ -29,6 +32,8 @@ const client = new Client({
 client.commands = new Collection();
 client.commands.set(eligibleCommand.data.name, eligibleCommand);
 client.commands.set(panelCommand.data.name, panelCommand);
+client.commands.set(storePanelCommand.data.name, storePanelCommand);
+client.commands.set(storeToggleCommand.data.name, storeToggleCommand);
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Bot] Login berhasil sebagai ${readyClient.user.tag}`);
@@ -107,6 +112,44 @@ client.on(Events.InteractionCreate, async (interaction) => {
           ephemeral: true,
         });
       }
+      return;
+    }
+
+    // --- Store: pilih produk di dropdown ---
+    if (interaction.isStringSelectMenu() && interaction.customId === storePanelCommand.STORE_SELECT_MENU_ID) {
+      await storeFlow.handleProductSelect(interaction);
+      return;
+    }
+
+    // --- Store: submit modal username Roblox (habis pilih produk) ---
+    if (interaction.isModalSubmit() && interaction.customId.startsWith(storeFlow.USERNAME_MODAL_PREFIX)) {
+      await storeFlow.handleUsernameModalSubmit(interaction);
+      return;
+    }
+
+    // --- Store: klik tombol Ya/Tidak konfirmasi akun Roblox ---
+    if (
+      interaction.isButton() &&
+      (interaction.customId === storeFlow.CONFIRM_YES_ID || interaction.customId === storeFlow.CONFIRM_NO_ID)
+    ) {
+      await storeFlow.handleConfirmButton(interaction);
+      return;
+    }
+
+    // --- Store: klik tombol Tutup Ticket (3 status) di dalam channel ticket ---
+    if (
+      interaction.isButton() &&
+      (interaction.customId === storeFlow.CLOSE_COMPLETED_ID ||
+        interaction.customId === storeFlow.CLOSE_CANCELLED_ID ||
+        interaction.customId === storeFlow.CLOSE_REFUNDED_ID)
+    ) {
+      await storeFlow.handleCloseButton(interaction);
+      return;
+    }
+
+    // --- Store: submit modal catatan penutupan ticket ---
+    if (interaction.isModalSubmit() && interaction.customId.startsWith(storeFlow.CLOSE_MODAL_PREFIX)) {
+      await storeFlow.handleCloseModalSubmit(interaction);
       return;
     }
   } catch (err) {
