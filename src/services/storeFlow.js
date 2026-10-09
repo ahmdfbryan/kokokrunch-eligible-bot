@@ -5,6 +5,7 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  StringSelectMenuBuilder,
   ChannelType,
   PermissionFlagsBits,
   AttachmentBuilder,
@@ -19,18 +20,23 @@ const {
   buildRobloxConfirmEmbed,
   buildTicketEmbed,
   buildOrderStatusEmbed,
+  buildTicketCreatedDmEmbed,
 } = require('../embeds/storeEmbeds');
 
 const USERNAME_MODAL_PREFIX = 'store_username_modal_';
 const USERNAME_INPUT_ID = 'roblox_username_input';
 const CONFIRM_YES_ID = 'store_confirm_yes';
 const CONFIRM_NO_ID = 'store_confirm_no';
-const CLOSE_BUTTON_PREFIX = 'store_close_';
-const CLOSE_COMPLETED_ID = `${CLOSE_BUTTON_PREFIX}completed`;
-const CLOSE_CANCELLED_ID = `${CLOSE_BUTTON_PREFIX}cancelled`;
-const CLOSE_REFUNDED_ID = `${CLOSE_BUTTON_PREFIX}refunded`;
+const CLOSE_TICKET_BUTTON_ID = 'store_close_ticket';
+const CLOSE_SELECT_ID = 'store_close_select';
 const CLOSE_MODAL_PREFIX = 'store_close_modal_';
 const CLOSE_NOTE_INPUT_ID = 'close_note_input';
+
+const CLOSE_STATUS_OPTIONS = [
+  { label: 'Completed - Produk berhasil dikirim', value: 'completed', emoji: '✅' },
+  { label: 'Cancelled - Dibatalkan', value: 'cancelled', emoji: '🚫' },
+  { label: 'Refund - Dana dikembalikan', value: 'refunded', emoji: '💸' },
+];
 
 const PENDING_TTL_MS = 10 * 60 * 1000; // 10 menit
 // key: buyerId -> { productId, username, displayName, userId, avatarUrl, createdAt }
@@ -157,7 +163,6 @@ async function handleUsernameModalSubmit(interaction) {
       buildRobloxConfirmEmbed({
         username: resolved.username,
         displayName: resolved.displayName,
-        userId: resolved.userId,
         avatarUrl,
         productLabel: product?.label || productId,
       }),
@@ -243,13 +248,20 @@ async function handleConfirmButton(interaction) {
 
     await interaction.editReply({ content: `✅ Ticket pesanan kamu berhasil dibuat: <#${channel.id}>` });
 
+    const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
+    const openTicketRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Buka Ticket')
+        .setEmoji('🎫')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${interaction.guild.id}/${channel.id}`)
+    );
+
     interaction.user
-      .send(
-        `🎫 **Ticket pesanan kamu telah dibuat!**\n` +
-        `Produk: **${ticket.productLabel}**\n` +
-        `Ticket ID: \`${ticket.ticketId}\`\n` +
-        `Silakan lanjutkan pembayaran di: <#${channel.id}>`
-      )
+      .send({
+        embeds: [buildTicketCreatedDmEmbed({ ticket, channelId: channel.id, guildIconUrl })],
+        components: [openTicketRow],
+      })
       .catch(() => {
         // DM tertutup -- tidak masalah, buyer tetap bisa akses via channel ticket-nya.
       });
@@ -327,9 +339,7 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage('attachment://qris.png');
 
   const closeRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(CLOSE_COMPLETED_ID).setLabel('Produk Berhasil Dikirim').setEmoji('✅').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(CLOSE_CANCELLED_ID).setLabel('Batal').setEmoji('🚫').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(CLOSE_REFUNDED_ID).setLabel('Refund').setEmoji('💸').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(CLOSE_TICKET_BUTTON_ID).setLabel('Tutup Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger)
   );
 
   await channel.send({
@@ -343,7 +353,7 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
 }
 
 // ---------------------------------------------------------------------------
-// 4. Klik tombol Tutup Ticket (3 status) -> tampilkan modal catatan admin
+// 4a. Klik tombol "Tutup Ticket" -> tampilkan dropdown pilihan status
 // ---------------------------------------------------------------------------
 async function handleCloseButton(interaction) {
   const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
@@ -357,7 +367,36 @@ async function handleCloseButton(interaction) {
     return;
   }
 
-  const closeStatus = interaction.customId.slice(CLOSE_BUTTON_PREFIX.length); // completed|cancelled|refunded
+  const selectRow = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(CLOSE_SELECT_ID)
+      .setPlaceholder('Pilih status penutupan ticket...')
+      .addOptions(CLOSE_STATUS_OPTIONS)
+  );
+
+  await interaction.reply({
+    content: 'Pilih status penutupan ticket ini:',
+    components: [selectRow],
+    ephemeral: true,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 4b. Pilih status di dropdown -> tampilkan modal catatan admin
+// ---------------------------------------------------------------------------
+async function handleCloseSelect(interaction) {
+  const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
+  if (!ticket || ticket.status !== 'open') {
+    await interaction.update({ content: '⚠️ Ticket ini sudah tidak aktif.', components: [] });
+    return;
+  }
+
+  if (!isStaffOrOwner(interaction.member, interaction.guild)) {
+    await interaction.update({ content: '🚫 Hanya staff atau owner yang bisa menutup ticket ini.', components: [] });
+    return;
+  }
+
+  const closeStatus = interaction.values[0]; // completed|cancelled|refunded
 
   const modal = new ModalBuilder()
     .setCustomId(`${CLOSE_MODAL_PREFIX}${closeStatus}`)
@@ -421,23 +460,4 @@ async function handleCloseModalSubmit(interaction) {
   }
 
   setTimeout(() => {
-    interaction.channel.delete().catch((err) => {
-      console.error('[Store] Gagal menghapus channel ticket:', err);
-    });
-  }, 10_000);
-}
-
-module.exports = {
-  USERNAME_MODAL_PREFIX,
-  CONFIRM_YES_ID,
-  CONFIRM_NO_ID,
-  CLOSE_COMPLETED_ID,
-  CLOSE_CANCELLED_ID,
-  CLOSE_REFUNDED_ID,
-  CLOSE_MODAL_PREFIX,
-  handleProductSelect,
-  handleUsernameModalSubmit,
-  handleConfirmButton,
-  handleCloseButton,
-  handleCloseModalSubmit,
-};
+    interaction.channel.delete().catch((err) =>
