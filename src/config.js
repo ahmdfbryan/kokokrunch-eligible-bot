@@ -29,7 +29,16 @@ const config = {
   roleGameRobloxId: process.env.ROLE_GAME_ROBLOX_ID?.trim() || null,
   roleGameFreefireId: process.env.ROLE_GAME_FREEFIRE_ID?.trim() || null,
   roleGamePubgId: process.env.ROLE_GAME_PUBG_ID?.trim() || null,
-  roleGameMlbbId: process.env.ROLE_GAME_MLBB_ID?.trim() || null,
+    roleGameMlbbId: process.env.ROLE_GAME_MLBB_ID?.trim() || null,
+
+  // Fitur Store + Ticket (jual produk seperti Golden Pet via dropdown di panel store).
+  // Semua opsional -- kalau salah satu kosong, command /store-panel akan menolak jalan
+  // dan kasih tahu env var mana yang belum diisi.
+  ticketCategoryId: process.env.TICKET_CATEGORY_ID?.trim() || null,
+  storeStaffRoleId: process.env.STORE_STAFF_ROLE_ID?.trim() || null,
+  orderLogChannelId: process.env.ORDER_LOG_CHANNEL_ID?.trim() || null,
+  qrisStaticPayload: process.env.QRIS_STATIC_PAYLOAD?.trim() || null,
+  goldenPetPrice: Number(process.env.GOLDEN_PET_PRICE || 90000),
 };
 
 if (Number.isNaN(config.eligibleDays) || config.eligibleDays <= 0) {
