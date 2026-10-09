@@ -100,10 +100,34 @@ function closeTicket(channelId, { status, note, closedById }) {
   return tickets[idx];
 }
 
+/**
+ * Tutup paksa ticket yang masih tercatat 'open' tapi channel Discord-nya
+ * sudah tidak ada lagi (misal dihapus manual langsung dari Discord, bukan
+ * lewat tombol "Tutup Ticket"). Supaya buyer tidak nyangkut dianggap masih
+ * punya ticket aktif selamanya.
+ */
+function forceCloseIfOrphaned(channelId) {
+  const tickets = readAll();
+  const idx = tickets.findIndex((t) => t.channelId === channelId && t.status === 'open');
+  if (idx === -1) return null;
+
+  tickets[idx] = {
+    ...tickets[idx],
+    status: 'closed',
+    closeStatus: 'cancelled',
+    closeNote: 'Channel ticket sudah tidak ditemukan (dihapus manual di luar bot), otomatis ditutup oleh sistem.',
+    closedById: null,
+    closedAt: new Date().toISOString(),
+  };
+  writeAll(tickets);
+  return tickets[idx];
+}
+
 module.exports = {
   getOpenTicketByBuyer,
   getTicketByChannelId,
   allocateUniqueCode,
   createTicket,
   closeTicket,
+  forceCloseIfOrphaned,
 };
