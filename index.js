@@ -19,6 +19,7 @@ const { syncFromResult } = require('./src/services/watchlistStore');
 const { startWatchlistScheduler } = require('./src/services/watchlistScheduler');
 const rolePanel = require('./src/services/rolePanelAutoSetup');
 const storeFlow = require('./src/services/storeFlow');
+const ticketStore = require('./src/services/ticketStore');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
@@ -136,14 +137,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // --- Store: klik tombol Tutup Ticket (3 status) di dalam channel ticket ---
-    if (
-      interaction.isButton() &&
-      (interaction.customId === storeFlow.CLOSE_COMPLETED_ID ||
-        interaction.customId === storeFlow.CLOSE_CANCELLED_ID ||
-        interaction.customId === storeFlow.CLOSE_REFUNDED_ID)
-    ) {
+    // --- Store: klik tombol "Tutup Ticket" di dalam channel ticket -> tampilkan dropdown status ---
+    if (interaction.isButton() && interaction.customId === storeFlow.CLOSE_TICKET_BUTTON_ID) {
       await storeFlow.handleCloseButton(interaction);
+      return;
+    }
+
+    // --- Store: pilih status di dropdown penutupan ticket -> tampilkan modal catatan ---
+    if (interaction.isStringSelectMenu() && interaction.customId === storeFlow.CLOSE_SELECT_ID) {
+      await storeFlow.handleCloseSelect(interaction);
       return;
     }
 
@@ -166,6 +168,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
 client.on(Events.MessageCreate, (message) => {
   if (message.author.id === client.user.id) return;
   scheduleStickyRepost(client, message.channelId);
+});
+
+// --- Store: kalau channel ticket dihapus manual (bukan via tombol "Tutup Ticket"),
+// otomatis tutup record ticket-nya supaya buyer tidak nyangkut dianggap masih aktif.
+client.on(Events.ChannelDelete, (channel) => {
+  try {
+    ticketStore.forceCloseIfOrphaned(channel.id);
+  } catch (err) {
+    console.error('[Store] Gagal auto-close ticket saat channel dihapus manual:', err);
+  }
 });
 
 process.on('unhandledRejection', (reason) => {
