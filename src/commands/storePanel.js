@@ -68,13 +68,17 @@ module.exports = {
     }
 
     const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
-    await interaction.reply(buildStorePanelPayload({ guildIconUrl }));
+
+    // Balas ephemeral dulu (cuma kelihatan oleh yang jalanin command), supaya
+    // panel yang dikirim ke channel (lewat channel.send di bawah) bersih --
+    // tidak ada keterangan "X used /store-panel" di atasnya.
+    await interaction.reply({ content: '✅ Panel Store berhasil dikirim ke channel ini.', ephemeral: true });
 
     try {
-      const sentMessage = await interaction.fetchReply();
+      const sentMessage = await interaction.channel.send(buildStorePanelPayload({ guildIconUrl }));
       addStorePanel({ channelId: interaction.channelId, messageId: sentMessage.id });
     } catch (err) {
-      console.error('[Store] Gagal menyimpan referensi panel Store:', err);
+      console.error('[Store] Gagal mengirim/menyimpan referensi panel Store:', err);
     }
   },
 };
