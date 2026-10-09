@@ -8,6 +8,7 @@ const config = require('../config');
 const { PRODUCTS } = require('../data/products');
 const { buildStorePanelEmbed } = require('../embeds/storeEmbeds');
 const { isStoreOpen } = require('../services/storeState');
+const { addStorePanel } = require('../services/storePanelStore');
 
 const STORE_SELECT_MENU_ID = 'store_product_select';
 
@@ -68,5 +69,12 @@ module.exports = {
 
     const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
     await interaction.reply(buildStorePanelPayload({ guildIconUrl }));
+
+    try {
+      const sentMessage = await interaction.fetchReply();
+      addStorePanel({ channelId: interaction.channelId, messageId: sentMessage.id });
+    } catch (err) {
+      console.error('[Store] Gagal menyimpan referensi panel Store:', err);
+    }
   },
 };
