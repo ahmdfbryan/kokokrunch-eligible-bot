@@ -38,18 +38,17 @@ function buildStorePanelEmbed({ guildIconUrl, storeOpen }) {
 }
 
 /** Embed konfirmasi akun Roblox sebelum ticket dibuat. */
-function buildRobloxConfirmEmbed({ username, displayName, userId, avatarUrl, productLabel }) {
+function buildRobloxConfirmEmbed({ username, displayName, avatarUrl, productLabel }) {
   const embed = new EmbedBuilder()
     .setColor(COLOR_INFO)
-    .setTitle('🔎 Konfirmasi Akun Roblox')
+    .setTitle('🔍 Confirm Your Roblox Account')
     .setDescription(
-      `Apakah ini akun Roblox kamu untuk pembelian **${productLabel}**?\n\n` +
-      '> Pastikan data di bawah ini benar sebelum melanjutkan.'
+      'Is this really your Roblox account?\n\n' +
+      `> Untuk pembelian **${productLabel}**.`
     )
     .addFields(
       { name: '👤 Username', value: `\`${username}\``, inline: true },
-      { name: '🪪 Display Name', value: `\`${displayName || username}\``, inline: true },
-      { name: '🆔 User ID', value: `\`${userId}\``, inline: true }
+      { name: '🪪 Display Name', value: `\`${displayName || username}\``, inline: true }
     )
     .setFooter({ text: 'KokoKrunch Studios • Store System' });
 
@@ -126,6 +125,7 @@ function buildOrderStatusEmbed({ ticket, closeStatus, note, closedByTag, guildIc
     .setDescription(meta.description)
     .addFields(
       { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true },
+      { name: '🛒 Pembeli', value: `<@${ticket.buyerId}>`, inline: true },
       { name: '👤 Akun Roblox', value: `\`${ticket.robloxUsername}\``, inline: true },
       { name: '📌 Status', value: `${meta.statusEmoji} ${meta.statusText}`, inline: true },
       { name: '📦 Produk', value: ticket.productLabel, inline: true },
@@ -139,10 +139,32 @@ function buildOrderStatusEmbed({ ticket, closeStatus, note, closedByTag, guildIc
   return embed;
 }
 
+/** Embed yang dikirim via DM ke pembeli setelah ticket berhasil dibuat. */
+function buildTicketCreatedDmEmbed({ ticket, channelId, guildIconUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(BRAND_COLOR)
+    .setTitle('🎫 Ticket Order Berhasil Dibuat')
+    .setDescription(
+      'Ticket order kamu di **KokoKrunch Studios** sudah berhasil dibuat.\n\n' +
+      `Silakan lanjutkan ke channel ticket kamu untuk menyelesaikan pembayaran: <#${channelId}>`
+    )
+    .addFields(
+      { name: '📦 Produk', value: ticket.productLabel, inline: true },
+      { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true }
+    )
+    .setFooter({ text: 'KokoKrunch Studios • Store System' })
+    .setTimestamp();
+
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
+
+  return embed;
+}
+
 module.exports = {
   buildStorePanelEmbed,
   buildRobloxConfirmEmbed,
   buildTicketEmbed,
   buildOrderStatusEmbed,
+  buildTicketCreatedDmEmbed,
   CLOSE_STATUS_META,
 };
