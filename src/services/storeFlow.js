@@ -9,6 +9,7 @@ const {
   ChannelType,
   PermissionFlagsBits,
   AttachmentBuilder,
+  OverwriteType,
 } = require('discord.js');
 const config = require('../config');
 const roblox = require('../roblox');
@@ -281,9 +282,10 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   const channelName = `ticket-${safeUsername || buyerId}`.slice(0, 90);
 
   const overwrites = [
-    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: guild.roles.everyone.id, type: OverwriteType.Role, deny: [PermissionFlagsBits.ViewChannel] },
     {
       id: buyerId,
+      type: OverwriteType.Member,
       allow: [
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
@@ -291,12 +293,17 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
         PermissionFlagsBits.AttachFiles,
       ],
     },
-    { id: guild.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+    {
+      id: guild.client.user.id,
+      type: OverwriteType.Member,
+      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels],
+    },
   ];
 
   if (config.storeStaffRoleId) {
     overwrites.push({
       id: config.storeStaffRoleId,
+      type: OverwriteType.Role,
       allow: [
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
@@ -309,6 +316,7 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   if (guild.ownerId && guild.ownerId !== buyerId) {
     overwrites.push({
       id: guild.ownerId,
+      type: OverwriteType.Member,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
     });
   }
