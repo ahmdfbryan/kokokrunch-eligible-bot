@@ -1,0 +1,443 @@
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ChannelType,
+  PermissionFlagsBits,
+  AttachmentBuilder,
+} = require('discord.js');
+const config = require('../config');
+const roblox = require('../roblox');
+const { getProductById, formatRupiah } = require('../data/products');
+const { isStoreOpen } = require('./storeState');
+const ticketStore = require('./ticketStore');
+const { generateDynamicQrisImage } = require('./qris');
+const {
+  buildRobloxConfirmEmbed,
+  buildTicketEmbed,
+  buildOrderStatusEmbed,
+} = require('../embeds/storeEmbeds');
+
+const USERNAME_MODAL_PREFIX = 'store_username_modal_';
+const USERNAME_INPUT_ID = 'roblox_username_input';
+const CONFIRM_YES_ID = 'store_confirm_yes';
+const CONFIRM_NO_ID = 'store_confirm_no';
+const CLOSE_BUTTON_PREFIX = 'store_close_';
+const CLOSE_COMPLETED_ID = `${CLOSE_BUTTON_PREFIX}completed`;
+const CLOSE_CANCELLED_ID = `${CLOSE_BUTTON_PREFIX}cancelled`;
+const CLOSE_REFUNDED_ID = `${CLOSE_BUTTON_PREFIX}refunded`;
+const CLOSE_MODAL_PREFIX = 'store_close_modal_';
+const CLOSE_NOTE_INPUT_ID = 'close_note_input';
+
+const PENDING_TTL_MS = 10 * 60 * 1000; // 10 menit
+// key: buyerId -> { productId, username, displayName, userId, avatarUrl, createdAt }
+const pendingConfirmations = new Map();
+
+function prunePending() {
+  const now = Date.now();
+  for (const [key, val] of pendingConfirmations.entries()) {
+    if (now - val.createdAt > PENDING_TTL_MS) pendingConfirmations.delete(key);
+  }
+}
+
+function isStaffOrOwner(member, guild) {
+  if (guild.ownerId === member.id) return true;
+  if (config.storeStaffRoleId && member.roles.cache.has(config.storeStaffRoleId)) return true;
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// 1. Pilih produk di dropdown
+// ---------------------------------------------------------------------------
+async function handleProductSelect(interaction) {
+  const productId = interaction.values[0];
+  const product = getProductById(productId);
+
+  if (!product) {
+    await interaction.reply({ content: '⚠️ Produk tidak dikenali.', ephemeral: true });
+    return;
+  }
+
+  if (!product.enabled) {
+    await interaction.reply({
+      content: `🔒 **${product.label}** belum tersedia saat ini. Nantikan kabar selanjutnya ya!`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (!isStoreOpen()) {
+    await interaction.reply({
+      content: '🔴 Toko sedang **tutup**. Silakan coba lagi nanti.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const existingTicket = ticketStore.getOpenTicketByBuyer(interaction.user.id);
+  if (existingTicket) {
+    await interaction.reply({
+      content: `⚠️ Kamu masih punya ticket aktif: <#${existingTicket.channelId}>. Selesaikan ticket tersebut dulu sebelum membuat yang baru.`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (product.requiresRobloxUsername) {
+    const modal = new ModalBuilder()
+      .setCustomId(`${USERNAME_MODAL_PREFIX}${productId}`)
+      .setTitle(`Pembelian ${product.label}`);
+
+    const usernameInput = new TextInputBuilder()
+      .setCustomId(USERNAME_INPUT_ID)
+      .setLabel('Username Roblox kamu')
+      .setPlaceholder('Contoh: usernamekamu')
+      .setStyle(TextInputStyle.Short)
+      .setMinLength(3)
+      .setMaxLength(50)
+      .setRequired(true);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(usernameInput));
+    await interaction.showModal(modal);
+    return;
+  }
+
+  // Produk yang tidak butuh username roblox -- belum ada kasus ini saat ini.
+  await interaction.reply({ content: '⚠️ Produk ini belum didukung.', ephemeral: true });
+}
+
+// ---------------------------------------------------------------------------
+// 2. Submit modal username -> cek ke Roblox -> tampilkan konfirmasi
+// ---------------------------------------------------------------------------
+async function handleUsernameModalSubmit(interaction) {
+  const productId = interaction.customId.slice(USERNAME_MODAL_PREFIX.length);
+  const product = getProductById(productId);
+  const inputUsername = interaction.fields.getTextInputValue(USERNAME_INPUT_ID).trim();
+
+  await interaction.deferReply({ ephemeral: true });
+
+  let resolved;
+  try {
+    resolved = await roblox.resolveUsername(inputUsername);
+  } catch (err) {
+    console.error('[Store] Gagal resolve username Roblox:', err);
+    await interaction.editReply('⚠️ Terjadi gangguan saat menghubungi server Roblox. Coba lagi dalam beberapa saat.');
+    return;
+  }
+
+  if (!resolved) {
+    await interaction.editReply(
+      `🔴 Username Roblox \`${inputUsername}\` tidak ditemukan. Cek kembali ejaan username kamu dan pilih produk lagi di panel Store.`
+    );
+    return;
+  }
+
+  const avatarUrl = await roblox.getAvatarUrl(resolved.userId);
+
+  prunePending();
+  pendingConfirmations.set(interaction.user.id, {
+    productId,
+    username: resolved.username,
+    displayName: resolved.displayName,
+    userId: resolved.userId,
+    avatarUrl,
+    createdAt: Date.now(),
+  });
+
+  const confirmRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(CONFIRM_YES_ID).setLabel('Ya, Lanjutkan').setEmoji('✅').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(CONFIRM_NO_ID).setLabel('Tidak, Batalkan').setEmoji('❌').setStyle(ButtonStyle.Danger)
+  );
+
+  await interaction.editReply({
+    embeds: [
+      buildRobloxConfirmEmbed({
+        username: resolved.username,
+        displayName: resolved.displayName,
+        userId: resolved.userId,
+        avatarUrl,
+        productLabel: product?.label || productId,
+      }),
+    ],
+    components: [confirmRow],
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 3. Klik tombol Ya / Tidak
+// ---------------------------------------------------------------------------
+async function handleConfirmButton(interaction) {
+  prunePending();
+  const pending = pendingConfirmations.get(interaction.user.id);
+
+  if (!pending) {
+    await interaction.update({
+      content: '⚠️ Sesi konfirmasi sudah kadaluarsa. Silakan pilih produk lagi di panel Store.',
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
+  if (interaction.customId === CONFIRM_NO_ID) {
+    pendingConfirmations.delete(interaction.user.id);
+    await interaction.update({
+      content: '🚫 Dibatalkan. Silakan pilih produk lagi di panel Store kalau ingin coba lagi.',
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
+  // CONFIRM_YES_ID
+  const product = getProductById(pending.productId);
+  if (!product || !product.enabled) {
+    pendingConfirmations.delete(interaction.user.id);
+    await interaction.update({ content: '⚠️ Produk sudah tidak tersedia.', embeds: [], components: [] });
+    return;
+  }
+
+  if (!isStoreOpen()) {
+    pendingConfirmations.delete(interaction.user.id);
+    await interaction.update({ content: '🔴 Toko sedang tutup. Dibatalkan.', embeds: [], components: [] });
+    return;
+  }
+
+  const existingTicket = ticketStore.getOpenTicketByBuyer(interaction.user.id);
+  if (existingTicket) {
+    pendingConfirmations.delete(interaction.user.id);
+    await interaction.update({
+      content: `⚠️ Kamu sudah punya ticket aktif: <#${existingTicket.channelId}>.`,
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
+  const uniqueCode = ticketStore.allocateUniqueCode();
+  if (uniqueCode === null) {
+    await interaction.update({
+      content: '⚠️ Sedang banyak pesanan masuk, semua kode unik terpakai. Coba lagi dalam beberapa saat.',
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
+  await interaction.update({ content: '⏳ Membuat ticket pesanan kamu...', embeds: [], components: [] });
+
+  try {
+    const { channel, ticket } = await createTicketChannel({
+      guild: interaction.guild,
+      buyerId: interaction.user.id,
+      product,
+      robloxUsername: pending.username,
+      robloxUserId: pending.userId,
+      uniqueCode,
+    });
+
+    pendingConfirmations.delete(interaction.user.id);
+
+    await interaction.editReply({ content: `✅ Ticket pesanan kamu berhasil dibuat: <#${channel.id}>` });
+
+    interaction.user
+      .send(
+        `🎫 **Ticket pesanan kamu telah dibuat!**\n` +
+        `Produk: **${ticket.productLabel}**\n` +
+        `Ticket ID: \`${ticket.ticketId}\`\n` +
+        `Silakan lanjutkan pembayaran di: <#${channel.id}>`
+      )
+      .catch(() => {
+        // DM tertutup -- tidak masalah, buyer tetap bisa akses via channel ticket-nya.
+      });
+  } catch (err) {
+    console.error('[Store] Gagal membuat ticket:', err);
+    await interaction.editReply({
+      content: '⚠️ Gagal membuat ticket. Silakan hubungi staff kami secara manual.',
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: buat channel ticket + kirim embed pesanan + QRIS
+// ---------------------------------------------------------------------------
+async function createTicketChannel({ guild, buyerId, product, robloxUsername, robloxUserId, uniqueCode }) {
+  const safeUsername = robloxUsername.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const channelName = `ticket-${safeUsername || buyerId}`.slice(0, 90);
+
+  const overwrites = [
+    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    {
+      id: buyerId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    },
+    { id: guild.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] },
+  ];
+
+  if (config.storeStaffRoleId) {
+    overwrites.push({
+      id: config.storeStaffRoleId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    });
+  }
+
+  if (guild.ownerId && guild.ownerId !== buyerId) {
+    overwrites.push({
+      id: guild.ownerId,
+      allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+    });
+  }
+
+  const channel = await guild.channels.create({
+    name: channelName,
+    type: ChannelType.GuildText,
+    parent: config.ticketCategoryId || undefined,
+    permissionOverwrites: overwrites,
+  });
+
+  const price = product.price;
+  const ticket = ticketStore.createTicket({
+    channelId: channel.id,
+    buyerId,
+    productId: product.id,
+    productLabel: product.label,
+    robloxUsername,
+    robloxUserId,
+    price,
+    uniqueCode,
+  });
+
+  const guildIconUrl = guild.iconURL({ size: 128 }) || null;
+  const qrisBuffer = await generateDynamicQrisImage(ticket.total);
+  const attachment = new AttachmentBuilder(qrisBuffer, { name: 'qris.png' });
+
+  const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage('attachment://qris.png');
+
+  const closeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(CLOSE_COMPLETED_ID).setLabel('Produk Berhasil Dikirim').setEmoji('✅').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(CLOSE_CANCELLED_ID).setLabel('Batal').setEmoji('🚫').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(CLOSE_REFUNDED_ID).setLabel('Refund').setEmoji('💸').setStyle(ButtonStyle.Secondary)
+  );
+
+  await channel.send({
+    content: `<@${buyerId}>`,
+    embeds: [embed],
+    files: [attachment],
+    components: [closeRow],
+  });
+
+  return { channel, ticket };
+}
+
+// ---------------------------------------------------------------------------
+// 4. Klik tombol Tutup Ticket (3 status) -> tampilkan modal catatan admin
+// ---------------------------------------------------------------------------
+async function handleCloseButton(interaction) {
+  const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
+  if (!ticket || ticket.status !== 'open') {
+    await interaction.reply({ content: '⚠️ Ticket ini sudah tidak aktif.', ephemeral: true });
+    return;
+  }
+
+  if (!isStaffOrOwner(interaction.member, interaction.guild)) {
+    await interaction.reply({ content: '🚫 Hanya staff atau owner yang bisa menutup ticket ini.', ephemeral: true });
+    return;
+  }
+
+  const closeStatus = interaction.customId.slice(CLOSE_BUTTON_PREFIX.length); // completed|cancelled|refunded
+
+  const modal = new ModalBuilder()
+    .setCustomId(`${CLOSE_MODAL_PREFIX}${closeStatus}`)
+    .setTitle('Catatan Penutupan Ticket');
+
+  const noteInput = new TextInputBuilder()
+    .setCustomId(CLOSE_NOTE_INPUT_ID)
+    .setLabel('Catatan (opsional)')
+    .setPlaceholder('Contoh: Produk sudah dikirim ke inventory')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(false)
+    .setMaxLength(500);
+
+  modal.addComponents(new ActionRowBuilder().addComponents(noteInput));
+  await interaction.showModal(modal);
+}
+
+// ---------------------------------------------------------------------------
+// 5. Submit modal catatan -> tutup ticket & kirim log order
+// ---------------------------------------------------------------------------
+async function handleCloseModalSubmit(interaction) {
+  const closeStatus = interaction.customId.slice(CLOSE_MODAL_PREFIX.length); // completed|cancelled|refunded
+  const note = interaction.fields.getTextInputValue(CLOSE_NOTE_INPUT_ID)?.trim() || '';
+
+  const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
+  if (!ticket || ticket.status !== 'open') {
+    await interaction.reply({ content: '⚠️ Ticket ini sudah tidak aktif.', ephemeral: true });
+    return;
+  }
+
+  const closedTicket = ticketStore.closeTicket(interaction.channelId, {
+    status: closeStatus,
+    note,
+    closedById: interaction.user.id,
+  });
+
+  await interaction.reply({
+    content: `✅ Ticket ditutup dengan status **${closeStatus.toUpperCase()}**. Channel ini akan terhapus dalam 10 detik...`,
+  });
+
+  const guildIconUrl = interaction.guild?.iconURL({ size: 128 }) || null;
+  if (config.orderLogChannelId) {
+    try {
+      const logChannel = await interaction.client.channels.fetch(config.orderLogChannelId);
+      if (logChannel && logChannel.isTextBased()) {
+        await logChannel.send({
+          embeds: [
+            buildOrderStatusEmbed({
+              ticket: closedTicket,
+              closeStatus,
+              note,
+              closedByTag: interaction.user.tag,
+              guildIconUrl,
+            }),
+          ],
+        });
+      }
+    } catch (err) {
+      console.error('[Store] Gagal kirim log order:', err);
+    }
+  }
+
+  setTimeout(() => {
+    interaction.channel.delete().catch((err) => {
+      console.error('[Store] Gagal menghapus channel ticket:', err);
+    });
+  }, 10_000);
+}
+
+module.exports = {
+  USERNAME_MODAL_PREFIX,
+  CONFIRM_YES_ID,
+  CONFIRM_NO_ID,
+  CLOSE_COMPLETED_ID,
+  CLOSE_CANCELLED_ID,
+  CLOSE_REFUNDED_ID,
+  CLOSE_MODAL_PREFIX,
+  handleProductSelect,
+  handleUsernameModalSubmit,
+  handleConfirmButton,
+  handleCloseButton,
+  handleCloseModalSubmit,
+};
