@@ -98,7 +98,7 @@ function buildVerifiedEmbed({ robloxUsername, displayName, userId, avatarUrl, jo
 function buildAutoNotificationEmbed({ robloxUsername, displayName, userId, avatarUrl, guildIconUrl, botAvatarUrl }) {
   const embed = new EmbedBuilder()
     .setColor(COLOR_GOLD)
-    .setFooter({ text: 'Sistem Pemantauan Otomatis', iconURL: botAvatarUrl || undefined })
+    .setFooter({ text: FOOTER_TEXT, iconURL: botAvatarUrl || undefined })
     .setTimestamp();
 
     if (guildIconUrl) {
