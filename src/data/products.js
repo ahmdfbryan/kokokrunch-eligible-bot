@@ -10,7 +10,7 @@ const PRODUCTS = [
     id: 'golden_pet',
     label: 'Golden Pet',
     emoji: '🐾',
-    description: 'Golden Pet eksklusif untuk akun Roblox kamu.',
+    description: 'Golden Pet eksklusif Mount Lonely.',
     get price() {
       return config.goldenPetPrice;
     },
