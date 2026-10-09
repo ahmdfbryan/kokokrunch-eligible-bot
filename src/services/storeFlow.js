@@ -56,6 +56,27 @@ function isStaffOrOwner(member, guild) {
   return false;
 }
 
+/**
+ * Cek ticket aktif milik buyer, tapi validasi dulu channel-nya masih ada.
+ * Kalau channel ticket ternyata sudah dihapus manual (di luar bot, misal
+ * dihapus langsung dari Discord), otomatis tutup record ticket itu supaya
+ * buyer tidak nyangkut dianggap masih punya ticket aktif.
+ */
+async function getActiveTicketOrHeal(guild, buyerId) {
+  const ticket = ticketStore.getOpenTicketByBuyer(buyerId);
+  if (!ticket) return null;
+
+  try {
+    const channel = await guild.channels.fetch(ticket.channelId);
+    if (channel) return ticket;
+  } catch {
+    // channel tidak ditemukan -> lanjut ke bawah untuk auto-close
+  }
+
+  ticketStore.forceCloseIfOrphaned(ticket.channelId);
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // 1. Pilih produk di dropdown
 // ---------------------------------------------------------------------------
@@ -84,7 +105,7 @@ async function handleProductSelect(interaction) {
     return;
   }
 
-  const existingTicket = ticketStore.getOpenTicketByBuyer(interaction.user.id);
+  const existingTicket = await getActiveTicketOrHeal(interaction.guild, interaction.user.id);
   if (existingTicket) {
     await interaction.reply({
       content: `⚠️ Kamu masih punya ticket aktif: <#${existingTicket.channelId}>. Selesaikan ticket tersebut dulu sebelum membuat yang baru.`,
@@ -212,7 +233,7 @@ async function handleConfirmButton(interaction) {
     return;
   }
 
-  const existingTicket = ticketStore.getOpenTicketByBuyer(interaction.user.id);
+  const existingTicket = await getActiveTicketOrHeal(interaction.guild, interaction.user.id);
   if (existingTicket) {
     pendingConfirmations.delete(interaction.user.id);
     await interaction.update({
