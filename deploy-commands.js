@@ -5,6 +5,7 @@ const panelCommand = require('./src/commands/panel');
 const storePanelCommand = require('./src/commands/storePanel');
 const storeToggleCommand = require('./src/commands/storeToggle');
 const goldDonationCommand = require('./src/commands/goldDonation');
+const howToDonateCommand = require('./src/commands/howToDonate');
 
 const commands = [
   eligibleCommand.data.toJSON(),
@@ -12,6 +13,7 @@ const commands = [
   storePanelCommand.data.toJSON(),
   storeToggleCommand.data.toJSON(),
   goldDonationCommand.data.toJSON(),
+  howToDonateCommand.data.toJSON(),
 ];
 
 const rest = new REST().setToken(config.discordToken);
