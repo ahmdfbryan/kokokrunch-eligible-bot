@@ -18,14 +18,17 @@ function buildGoldDonationEmbed({ guildIconUrl }) {
     .setColor(BRAND_COLOR)
     .setTitle('🪙 Gold Donation')
     .setDescription(
-      'Dukung terus perkembangan game **KokoKrunch Studios** lewat Gold Donation! ✨\n\n' +
-      '**📢 Cara Kerjanya:**\n' +
-      'Setiap ada donasi yang masuk, pesan donasi akan **otomatis ditampilkan di map** yang kamu donasikan ' +
-      'dan namamu akan **tercatat di leaderboard Gold Donation**.\n\n' +
-      '**💛 Terima Kasih**\n' +
-      'Setiap dukungan yang kalian berikan sangat berarti untuk membantu kami terus mengembangkan game ' +
-      'dan menghadirkan pembaruan yang lebih baik.\n\n' +
-      '👇 Pilih map yang ingin kamu dukung di bawah ini.'
+      'Setiap Gold yang kamu berikan adalah dukungan nyata untuk **KokoKrunch Studios**. ' +
+      'Dari sinilah kami terus mengembangkan game, merawat setiap map, dan menghadirkan pembaruan ' +
+      'yang lebih baik untuk kalian semua.\n\n' +
+      '### Cara Kerjanya:\n' +
+      'Begitu donasimu masuk, pesan donasi akan **langsung muncul di map** yang kamu dukung, ' +
+      'sehingga semua pemain bisa melihat siapa yang telah berkontribusi. ' +
+      'Namamu juga akan **tercatat di leaderboard Gold Donation** sebagai bentuk apresiasi dari kami.\n\n' +
+      '### Terima Kasih\n' +
+      'Setiap dukungan yang kalian berikan, sekecil apa pun, sangat berarti bagi perjalanan kami. ' +
+      'Terima kasih sudah menjadi bagian dari komunitas KokoKrunch Studios.\n\n' +
+      '-# Pilih map yang ingin kamu dukung melalui tombol di bawah ini.'
     );
 
   if (guildIconUrl) {
