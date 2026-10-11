@@ -120,6 +120,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    // --- How to Donate: tombol "Translate to English" ---
+    if (interaction.isButton() && interaction.customId === howToDonateCommand.TRANSLATE_BUTTON_ID) {
+      await howToDonateCommand.handleTranslateButton(interaction);
+      return;
+    }
+
     // --- Store: pilih produk di dropdown ---
     if (interaction.isStringSelectMenu() && interaction.customId === storePanelCommand.STORE_SELECT_MENU_ID) {
       await storeFlow.handleProductSelect(interaction);
