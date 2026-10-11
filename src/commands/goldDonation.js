@@ -21,10 +21,11 @@ function buildGoldDonationEmbed({ guildIconUrl }) {
       'Setiap Gold yang kamu berikan adalah dukungan nyata untuk **KokoKrunch Studios**. ' +
       'Dari sinilah kami terus mengembangkan game, merawat setiap map, dan menghadirkan pembaruan ' +
       'yang lebih baik untuk kalian semua.\n' +
-      '### Cara Kerjanya:\n' +
-      'Begitu donasimu masuk, pesan donasi akan **langsung muncul di map** yang kamu dukung, ' +
-      'sehingga semua pemain bisa melihat siapa yang telah berkontribusi. ' +
-      'Namamu juga akan **tercatat di leaderboard Gold Donation** sebagai bentuk apresiasi dari kami.\n' +
+      '### Cara Kerja:\n' +
+      '- Ikuti seluruh panduan yang tersedia di channel <#1558729673716932608>\n' +
+      '- Setelah donasi kamu berhasil, pesan donasi akan **langsung muncul di map** yang kamu dukung. ' +
+      'Sehingga semua pemain bisa melihat siapa yang telah berkontribusi.\n' +
+      '- Namamu juga akan **tercatat di leaderboard Gold Donation** sebagai bentuk apresiasi dari kami.\n' +
       '### Terima Kasih\n' +
       'Setiap dukungan yang kalian berikan, sekecil apa pun, sangat berarti bagi perjalanan kami. ' +
       'Terima kasih sudah menjadi bagian dari komunitas KokoKrunch Studios.\n\n' +
