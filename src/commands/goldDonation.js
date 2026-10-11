@@ -28,7 +28,12 @@ function buildGoldDonationEmbed({ guildIconUrl }) {
       '👇 Pilih map yang ingin kamu dukung di bawah ini.'
     );
 
-  if (guildIconUrl) embed.setThumbnail(guildIconUrl); // foto server di sisi kanan
+  if (guildIconUrl) {
+    embed.setAuthor({ name: 'KokoKrunch Studios', iconURL: guildIconUrl }); // foto + nama server di atas judul
+    embed.setThumbnail(guildIconUrl); // foto server di sisi kanan
+  } else {
+    embed.setAuthor({ name: 'KokoKrunch Studios' });
+  }
 
   return embed;
 }
