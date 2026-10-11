@@ -1,0 +1,1 @@
+assets/how-to-donate/
