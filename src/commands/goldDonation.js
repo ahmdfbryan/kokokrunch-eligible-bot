@@ -19,19 +19,14 @@ function buildGoldDonationEmbed({ guildIconUrl }) {
     .setTitle('🪙 Gold Donation')
     .setDescription(
       'Dukung terus perkembangan game **KokoKrunch Studios** lewat Gold Donation! ✨\n\n' +
-      '**📢 Cara Kerjanya**\n' +
-      '> Setiap ada donasi yang masuk, pesan donasi akan **otomatis ditampilkan di map** yang kamu donasikan ' +
+      '**📢 Cara Kerjanya:**\n' +
+      'Setiap ada donasi yang masuk, pesan donasi akan **otomatis ditampilkan di map** yang kamu donasikan ' +
       'dan namamu akan **tercatat di leaderboard Gold Donation**.\n\n' +
       '**💛 Terima Kasih**\n' +
       'Setiap dukungan yang kalian berikan sangat berarti untuk membantu kami terus mengembangkan game ' +
       'dan menghadirkan pembaruan yang lebih baik.\n\n' +
       '👇 Pilih map yang ingin kamu dukung di bawah ini.'
-    )
-    .setFooter({
-      text: 'Made by KokoKrunch Studios',
-      iconURL: guildIconUrl || undefined,
-    })
-    .setTimestamp();
+    );
 
   if (guildIconUrl) embed.setThumbnail(guildIconUrl); // foto server di sisi kanan
 
