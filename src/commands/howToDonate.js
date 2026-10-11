@@ -41,20 +41,27 @@ const STEPS = [
   },
 ];
 
-function buildHowToDonatePayload() {
+function buildHowToDonatePayload({ guildIconUrl } = {}) {
   const embeds = [];
   const files = [];
 
-  for (const step of STEPS) {
-    embeds.push(
-      new EmbedBuilder()
-        .setColor(BRAND_COLOR)
-        .setTitle(step.title)
-        .setDescription(step.description)
-        .setImage(`attachment://${step.file}`)
-    );
+  STEPS.forEach((step, index) => {
+    const embed = new EmbedBuilder()
+      .setColor(BRAND_COLOR)
+      .setTitle(step.title)
+      .setDescription(step.description)
+      .setImage(`attachment://${step.file}`);
+
+    // Footer hanya di embed terakhir (Langkah 4): foto server + "Made by ..." + waktu.
+    if (index === STEPS.length - 1) {
+      embed
+        .setFooter({ text: 'Made by KokoKrunch Studios', iconURL: guildIconUrl || undefined })
+        .setTimestamp();
+    }
+
+    embeds.push(embed);
     files.push(new AttachmentBuilder(path.join(ASSET_DIR, step.file), { name: step.file }));
-  }
+  });
 
   return { embeds, files };
 }
@@ -70,7 +77,7 @@ module.exports = {
   async execute(interaction) {
     let payload;
     try {
-      payload = buildHowToDonatePayload();
+      payload = buildHowToDonatePayload({ guildIconUrl: interaction.guild?.iconURL({ size: 128 }) || null });
     } catch (err) {
       console.error('[HowToDonate] Gagal menyiapkan panduan:', err);
       await interaction.reply({
