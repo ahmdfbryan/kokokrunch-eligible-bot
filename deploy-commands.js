@@ -4,12 +4,14 @@ const eligibleCommand = require('./src/commands/eligible');
 const panelCommand = require('./src/commands/panel');
 const storePanelCommand = require('./src/commands/storePanel');
 const storeToggleCommand = require('./src/commands/storeToggle');
+const goldDonationCommand = require('./src/commands/goldDonation');
 
 const commands = [
   eligibleCommand.data.toJSON(),
   panelCommand.data.toJSON(),
   storePanelCommand.data.toJSON(),
   storeToggleCommand.data.toJSON(),
+  goldDonationCommand.data.toJSON(),
 ];
 
 const rest = new REST().setToken(config.discordToken);
