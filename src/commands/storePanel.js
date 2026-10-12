@@ -37,7 +37,6 @@ function buildStorePanelPayload({ guildIconUrl }) {
 
 function getMissingConfigVars() {
   const missing = [];
-  if (!config.ticketCategoryId) missing.push('TICKET_CATEGORY_ID');
   if (!config.storeStaffRoleId) missing.push('STORE_STAFF_ROLE_ID');
   if (!config.orderLogChannelId) missing.push('ORDER_LOG_CHANNEL_ID');
   if (!config.qrisStaticPayload) missing.push('QRIS_STATIC_PAYLOAD');
