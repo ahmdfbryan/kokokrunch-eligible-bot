@@ -22,6 +22,20 @@ function getOpenTicketByBuyer(buyerId) {
   return readAll().find((t) => t.buyerId === buyerId && t.status === 'open') || null;
 }
 
+/** Ticket open milik akun Roblox yang sama (cocok via userId, atau username tanpa peduli huruf besar/kecil). */
+function getOpenTicketByRobloxUser({ robloxUserId, robloxUsername }) {
+  const idStr = robloxUserId != null ? String(robloxUserId) : null;
+  const nameLower = robloxUsername ? String(robloxUsername).toLowerCase() : null;
+  return (
+    readAll().find(
+      (t) =>
+        t.status === 'open' &&
+        ((idStr && t.robloxUserId != null && String(t.robloxUserId) === idStr) ||
+          (nameLower && t.robloxUsername && String(t.robloxUsername).toLowerCase() === nameLower))
+    ) || null
+  );
+}
+
 function getTicketByChannelId(channelId) {
   return readAll().find((t) => t.channelId === channelId) || null;
 }
@@ -125,6 +139,7 @@ function forceCloseIfOrphaned(channelId) {
 
 module.exports = {
   getOpenTicketByBuyer,
+  getOpenTicketByRobloxUser,
   getTicketByChannelId,
   allocateUniqueCode,
   createTicket,
