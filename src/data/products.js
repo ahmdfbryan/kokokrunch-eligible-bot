@@ -13,6 +13,7 @@ const PRODUCTS = [
     description: 'Golden Pet eksklusif Mount Lonely.',
     ticketPrefix: 'gold',
     categoryName: 'Golden Pet', // kategori ticket (otomatis "Golden Pet 2", "Golden Pet 3", ... kalau penuh)
+    useLegacyCategory: true, // kategori lama dari TICKET_CATEGORY_ID (kalau diisi) tetap dipakai dulu sebelum bikin baru
     get price() {
       return config.goldenPetPrice;
     },
