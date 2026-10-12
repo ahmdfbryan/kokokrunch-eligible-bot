@@ -389,7 +389,11 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   // Pilih/buat kategori khusus produk (maks 50 channel per kategori), lalu buat channel ticket-nya.
   // Dijalankan berurutan (runExclusive) supaya 2 pembeli bersamaan tidak berebut slot terakhir.
   const channel = await runExclusive(async () => {
-    const category = await getOrCreateCategory(guild, product.categoryName || product.label);
+    const category = await getOrCreateCategory(guild, {
+      productKey: product.id,
+      baseName: product.categoryName || product.label,
+      legacyCategoryId: product.useLegacyCategory ? config.ticketCategoryId : null,
+    });
     return guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
