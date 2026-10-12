@@ -17,6 +17,7 @@ const { getProductById, formatRupiah } = require('../data/products');
 const { isStoreOpen } = require('./storeState');
 const ticketStore = require('./ticketStore');
 const { generateDynamicQrisImage } = require('./qris');
+const { runExclusive, getOrCreateCategory } = require('./ticketCategory');
 const {
   buildRobloxConfirmEmbed,
   buildTicketEmbed,
@@ -62,8 +63,7 @@ function isStaffOrOwner(member, guild) {
  * dihapus langsung dari Discord), otomatis tutup record ticket itu supaya
  * buyer tidak nyangkut dianggap masih punya ticket aktif.
  */
-async function getActiveTicketOrHeal(guild, buyerId) {
-  const ticket = ticketStore.getOpenTicketByBuyer(buyerId);
+async function validateOpenTicket(guild, ticket) {
   if (!ticket) return null;
 
   try {
@@ -74,6 +74,21 @@ async function getActiveTicketOrHeal(guild, buyerId) {
   }
 
   ticketStore.forceCloseIfOrphaned(ticket.channelId);
+  return null;
+}
+
+async function getActiveTicketOrHeal(guild, buyerId) {
+  return validateOpenTicket(guild, ticketStore.getOpenTicketByBuyer(buyerId));
+}
+
+/** Sama seperti di atas, tapi berdasarkan akun Roblox (1 username Roblox = 1 ticket aktif). */
+async function getActiveTicketByRobloxOrHeal(guild, { robloxUserId, robloxUsername }) {
+  for (let i = 0; i < 5; i++) {
+    const ticket = ticketStore.getOpenTicketByRobloxUser({ robloxUserId, robloxUsername });
+    if (!ticket) return null;
+    const valid = await validateOpenTicket(guild, ticket);
+    if (valid) return valid;
+  }
   return null;
 }
 
@@ -163,6 +178,18 @@ async function handleUsernameModalSubmit(interaction) {
     return;
   }
 
+  const duplicateRobloxTicket = await getActiveTicketByRobloxOrHeal(interaction.guild, {
+    robloxUserId: resolved.userId,
+    robloxUsername: resolved.username,
+  });
+  if (duplicateRobloxTicket) {
+    await interaction.editReply(
+      `⚠️ Akun Roblox **${resolved.username}** sudah memiliki ticket aktif: <#${duplicateRobloxTicket.channelId}>. ` +
+      'Satu username Roblox hanya bisa memiliki 1 ticket aktif.'
+    );
+    return;
+  }
+
   const avatarUrl = await roblox.getAvatarUrl(resolved.userId);
 
   prunePending();
@@ -238,6 +265,22 @@ async function handleConfirmButton(interaction) {
     pendingConfirmations.delete(interaction.user.id);
     await interaction.update({
       content: `⚠️ Kamu sudah punya ticket aktif: <#${existingTicket.channelId}>.`,
+      embeds: [],
+      components: [],
+    });
+    return;
+  }
+
+  const duplicateRobloxTicket = await getActiveTicketByRobloxOrHeal(interaction.guild, {
+    robloxUserId: pending.userId,
+    robloxUsername: pending.username,
+  });
+  if (duplicateRobloxTicket) {
+    pendingConfirmations.delete(interaction.user.id);
+    await interaction.update({
+      content:
+        `⚠️ Akun Roblox **${pending.username}** sudah memiliki ticket aktif: <#${duplicateRobloxTicket.channelId}>. ` +
+        'Satu username Roblox hanya bisa memiliki 1 ticket aktif.',
       embeds: [],
       components: [],
     });
@@ -343,11 +386,16 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
     });
   }
 
-  const channel = await guild.channels.create({
-    name: channelName,
-    type: ChannelType.GuildText,
-    parent: config.ticketCategoryId || undefined,
-    permissionOverwrites: overwrites,
+  // Pilih/buat kategori khusus produk (maks 50 channel per kategori), lalu buat channel ticket-nya.
+  // Dijalankan berurutan (runExclusive) supaya 2 pembeli bersamaan tidak berebut slot terakhir.
+  const channel = await runExclusive(async () => {
+    const category = await getOrCreateCategory(guild, product.categoryName || product.label);
+    return guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: category.id,
+      permissionOverwrites: overwrites,
+    });
   });
 
   const price = product.price;
