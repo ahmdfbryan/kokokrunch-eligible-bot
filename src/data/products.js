@@ -12,6 +12,7 @@ const PRODUCTS = [
     emoji: '🐾',
     description: 'Golden Pet eksklusif Mount Lonely.',
     ticketPrefix: 'gold',
+    categoryName: 'Golden Pet', // kategori ticket (otomatis "Golden Pet 2", "Golden Pet 3", ... kalau penuh)
     get price() {
       return config.goldenPetPrice;
     },
