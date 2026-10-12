@@ -29,10 +29,7 @@ function buildStorePanelEmbed({ guildIconUrl, storeOpen }) {
     .setFooter({ text: 'KokoKrunch Studios • Store System' })
     .setTimestamp();
 
-  if (guildIconUrl) {
-    embed.setAuthor({ name: 'KokoKrunch Studios', iconURL: guildIconUrl });
-    embed.setThumbnail(guildIconUrl);
-  }
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
 
   return embed;
 }
