@@ -1,7 +1,8 @@
 const {
   SlashCommandBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   PermissionFlagsBits,
 } = require('discord.js');
 const config = require('../config');
@@ -10,28 +11,33 @@ const { buildStorePanelEmbed } = require('../embeds/storeEmbeds');
 const { isStoreOpen } = require('../services/storeState');
 const { addStorePanel } = require('../services/storePanelStore');
 
+// Dropdown lama (dipertahankan hanya supaya panel lama yang belum ter-refresh tetap berfungsi).
 const STORE_SELECT_MENU_ID = 'store_product_select';
+// Tombol produk: customId = prefix + id produk, mis. "store_product_btn_golden_pet".
+const STORE_PRODUCT_BUTTON_PREFIX = 'store_product_btn_';
 
-function buildStoreSelectRow() {
-  const select = new StringSelectMenuBuilder()
-    .setCustomId(STORE_SELECT_MENU_ID)
-    .setPlaceholder('🛍️ Pilih produk yang ingin dibeli...')
-    .addOptions(
-      PRODUCTS.map((p) => ({
-        label: p.label,
-        value: p.id,
-        description: p.enabled ? `${p.description}` : 'Belum tersedia saat ini',
-        emoji: p.emoji,
-      }))
+/** Satu tombol per produk (maks 5 per baris). Produk yang belum tersedia tampil abu-abu. */
+function buildStoreButtonRows() {
+  const rows = [];
+  for (let i = 0; i < PRODUCTS.length; i += 5) {
+    const row = new ActionRowBuilder().addComponents(
+      PRODUCTS.slice(i, i + 5).map((p) =>
+        new ButtonBuilder()
+          .setCustomId(`${STORE_PRODUCT_BUTTON_PREFIX}${p.id}`)
+          .setLabel(p.label)
+          .setEmoji(p.emoji)
+          .setStyle(p.enabled ? ButtonStyle.Success : ButtonStyle.Secondary)
+      )
     );
-
-  return new ActionRowBuilder().addComponents(select);
+    rows.push(row);
+  }
+  return rows;
 }
 
 function buildStorePanelPayload({ guildIconUrl }) {
   return {
     embeds: [buildStorePanelEmbed({ guildIconUrl, storeOpen: isStoreOpen() })],
-    components: [buildStoreSelectRow()],
+    components: buildStoreButtonRows(),
   };
 }
 
@@ -45,7 +51,8 @@ function getMissingConfigVars() {
 
 module.exports = {
   STORE_SELECT_MENU_ID,
-  buildStoreSelectRow,
+  STORE_PRODUCT_BUTTON_PREFIX,
+  buildStoreButtonRows,
   buildStorePanelPayload,
   getMissingConfigVars,
 
