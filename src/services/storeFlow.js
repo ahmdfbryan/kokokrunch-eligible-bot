@@ -27,6 +27,7 @@ const {
   buildProductDeliveredDmEmbed,
   buildPaymentClaimedEmbed,
   buildFundsReceivedEmbed,
+  buildPaymentDeadlineEmbed,
   PAYMENT_STATUS_FIELD_NAME,
 } = require('../embeds/storeEmbeds');
 
@@ -442,6 +443,13 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
     components: [closeRow],
   });
   ticketStore.setTicketMessageId(channel.id, ticketMessage.id);
+
+  // Embed pengingat batas waktu bayar (info saja, tidak ada auto-close -- staff yang menutup manual).
+  try {
+    await channel.send({ embeds: [buildPaymentDeadlineEmbed({ ticket })] });
+  } catch (err) {
+    console.warn('[Store] Gagal kirim embed batas waktu pembayaran:', err.message);
+  }
 
   return { channel, ticket };
 }
