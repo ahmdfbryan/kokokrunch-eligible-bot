@@ -10,6 +10,7 @@ const {
   PermissionFlagsBits,
   AttachmentBuilder,
   OverwriteType,
+  EmbedBuilder,
 } = require('discord.js');
 const config = require('../config');
 const roblox = require('../roblox');
@@ -23,6 +24,7 @@ const {
   buildTicketEmbed,
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
+  PAYMENT_STATUS_FIELD_NAME,
 } = require('../embeds/storeEmbeds');
 
 const USERNAME_MODAL_PREFIX = 'store_username_modal_';
@@ -30,6 +32,7 @@ const USERNAME_INPUT_ID = 'roblox_username_input';
 const CONFIRM_YES_ID = 'store_confirm_yes';
 const CONFIRM_NO_ID = 'store_confirm_no';
 const CLOSE_TICKET_BUTTON_ID = 'store_close_ticket';
+const CONFIRM_PAYMENT_BUTTON_ID = 'store_confirm_payment';
 const CLOSE_SELECT_ID = 'store_close_select';
 const CLOSE_MODAL_PREFIX = 'store_close_modal_';
 const CLOSE_NOTE_INPUT_ID = 'close_note_input';
@@ -420,9 +423,7 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
 
   const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage('attachment://qris.png');
 
-  const closeRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(CLOSE_TICKET_BUTTON_ID).setLabel('Tutup Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger)
-  );
+  const closeRow = buildTicketButtonsRow({ paymentConfirmed: false });
 
   await channel.send({
     content: `<@${buyerId}>`,
@@ -432,6 +433,78 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   });
 
   return { channel, ticket };
+}
+
+function buildTicketButtonsRow({ paymentConfirmed }) {
+  const confirmBtn = new ButtonBuilder()
+    .setCustomId(CONFIRM_PAYMENT_BUTTON_ID)
+    .setEmoji('✅')
+    .setStyle(ButtonStyle.Success);
+  if (paymentConfirmed) confirmBtn.setLabel('Menunggu Verifikasi').setEmoji('🕐').setStyle(ButtonStyle.Secondary).setDisabled(true);
+  else confirmBtn.setLabel('Konfirmasi Pembayaran');
+
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(CLOSE_TICKET_BUTTON_ID).setLabel('Tutup Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+    confirmBtn
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 4-0. Pembeli klik "Konfirmasi Pembayaran" -> minta kirim bukti bayar, tandai menunggu verifikasi staff
+// ---------------------------------------------------------------------------
+async function handleConfirmPaymentButton(interaction) {
+  const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
+  if (!ticket || ticket.status !== 'open') {
+    await interaction.reply({ content: '⚠️ Ticket ini sudah tidak aktif.', ephemeral: true });
+    return;
+  }
+
+  if (interaction.user.id !== ticket.buyerId) {
+    await interaction.reply({
+      content: '🚫 Tombol ini khusus untuk pembeli pemilik ticket ini.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const claimed = ticketStore.confirmPayment(interaction.channelId, { confirmedById: interaction.user.id });
+  if (!claimed) {
+    await interaction.reply({
+      content: 'ℹ️ Kamu sudah menekan konfirmasi pembayaran. Silakan kirim bukti pembayaranmu di channel ini dan tunggu staff memverifikasi.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  // Update pesan ticket: status pembayaran di embed + tombol jadi nonaktif.
+  const baseEmbed = interaction.message.embeds?.[0];
+  const embed = baseEmbed ? EmbedBuilder.from(baseEmbed) : null;
+  if (embed) {
+    const newField = { name: PAYMENT_STATUS_FIELD_NAME, value: '🕐 Pembeli sudah konfirmasi bayar — menunggu bukti pembayaran & verifikasi staff' };
+    const fields = embed.data.fields || [];
+    const fIdx = fields.findIndex((f) => f.name === PAYMENT_STATUS_FIELD_NAME);
+    if (fIdx >= 0) embed.spliceFields(fIdx, 1, newField);
+    else embed.addFields(newField);
+  }
+
+  await interaction.update({
+    ...(embed ? { embeds: [embed] } : {}),
+    components: [buildTicketButtonsRow({ paymentConfirmed: true })],
+  });
+
+  const staffMention = config.storeStaffRoleId ? `<@&${config.storeStaffRoleId}>` : '';
+  await interaction.followUp({
+    content:
+      `<@${ticket.buyerId}> terima kasih sudah konfirmasi! 🙏\n` +
+      `📸 Silakan **kirim bukti pembayaran** (screenshot/foto transfer) di channel ini, ` +
+      `pastikan nominal **${formatRupiah(ticket.total)}** terlihat jelas.\n` +
+      `Setelah itu mohon tunggu, staff kami akan memverifikasi pembayaranmu.` +
+      (staffMention ? `\n\n${staffMention} pembeli menyatakan sudah membayar, mohon dicek.` : ''),
+    allowedMentions: {
+      users: [ticket.buyerId],
+      roles: config.storeStaffRoleId ? [config.storeStaffRoleId] : [],
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -554,11 +627,13 @@ module.exports = {
   CONFIRM_YES_ID,
   CONFIRM_NO_ID,
   CLOSE_TICKET_BUTTON_ID,
+  CONFIRM_PAYMENT_BUTTON_ID,
   CLOSE_SELECT_ID,
   CLOSE_MODAL_PREFIX,
   handleProductSelect,
   handleUsernameModalSubmit,
   handleConfirmButton,
+  handleConfirmPaymentButton,
   handleCloseButton,
   handleCloseSelect,
   handleCloseModalSubmit,
