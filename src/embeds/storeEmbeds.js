@@ -157,6 +157,25 @@ function buildTicketCreatedDmEmbed({ ticket, channelId, guildIconUrl }) {
   return embed;
 }
 
+const PAYMENT_DEADLINE_MINUTES = 10;
+
+/** Embed pengingat batas waktu pembayaran (informasi saja -- penutupan ticket tetap manual oleh staff). */
+function buildPaymentDeadlineEmbed({ ticket }) {
+  const createdMs = ticket.createdAt ? new Date(ticket.createdAt).getTime() : Date.now();
+  const deadlineUnix = Math.floor((createdMs + PAYMENT_DEADLINE_MINUTES * 60 * 1000) / 1000);
+
+  return new EmbedBuilder()
+    .setColor(COLOR_REFUND)
+    .setTitle('⏰ Batas Waktu Pembayaran')
+    .setDescription(
+      `Mohon selesaikan pembayaran dan klik tombol **Konfirmasi Pembayaran** dalam waktu **${PAYMENT_DEADLINE_MINUTES} menit** ` +
+      'sejak ticket ini dibuat.\n\n' +
+      'Jika tidak ada konfirmasi pembayaran sampai batas waktu tersebut, ticket ini akan **ditutup oleh admin**.\n\n' +
+      `⏳ Batas waktu: <t:${deadlineUnix}:t> (<t:${deadlineUnix}:R>)`
+    )
+    .setFooter({ text: 'KokoKrunch Studios • Store System' });
+}
+
 /** Embed di channel ticket saat pembeli menekan "Konfirmasi Pembayaran": minta bukti bayar. */
 function buildPaymentClaimedEmbed({ ticket, guildIconUrl }) {
   const embed = new EmbedBuilder()
@@ -232,6 +251,8 @@ module.exports = {
   buildProductDeliveredDmEmbed,
   buildPaymentClaimedEmbed,
   buildFundsReceivedEmbed,
+  buildPaymentDeadlineEmbed,
+  PAYMENT_DEADLINE_MINUTES,
   CLOSE_STATUS_META,
   PAYMENT_STATUS_FIELD_NAME,
   PAYMENT_PENDING_TEXT,
