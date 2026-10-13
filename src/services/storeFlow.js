@@ -558,6 +558,11 @@ async function handleFundsReceivedCommand(interaction) {
         guildIconUrl: interaction.guild?.iconURL({ size: 128 }) || null,
       }),
     ],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(CLOSE_TICKET_BUTTON_ID).setLabel('Tutup Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger)
+      ),
+    ],
     allowedMentions: { users: [ticket.buyerId] },
   });
 
