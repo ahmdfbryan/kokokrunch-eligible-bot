@@ -423,24 +423,26 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
 
   const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage('attachment://qris.png');
 
-  const closeRow = buildTicketButtonsRow({ paymentConfirmed: false });
+  const closeRow = buildTicketButtonsRow({ state: 'none' });
 
-  await channel.send({
+  const ticketMessage = await channel.send({
     content: `<@${buyerId}>`,
     embeds: [embed],
     files: [attachment],
     components: [closeRow],
   });
+  ticketStore.setTicketMessageId(channel.id, ticketMessage.id);
 
   return { channel, ticket };
 }
 
-function buildTicketButtonsRow({ paymentConfirmed }) {
+function buildTicketButtonsRow({ state }) {
   const confirmBtn = new ButtonBuilder()
     .setCustomId(CONFIRM_PAYMENT_BUTTON_ID)
     .setEmoji('✅')
     .setStyle(ButtonStyle.Success);
-  if (paymentConfirmed) confirmBtn.setLabel('Menunggu Verifikasi').setEmoji('🕐').setStyle(ButtonStyle.Secondary).setDisabled(true);
+  if (state === 'received') confirmBtn.setLabel('Dana Diterima').setEmoji('💰').setStyle(ButtonStyle.Success).setDisabled(true);
+  else if (state === 'claimed') confirmBtn.setLabel('Menunggu Verifikasi').setEmoji('🕐').setStyle(ButtonStyle.Secondary).setDisabled(true);
   else confirmBtn.setLabel('Konfirmasi Pembayaran');
 
   return new ActionRowBuilder().addComponents(
@@ -489,7 +491,7 @@ async function handleConfirmPaymentButton(interaction) {
 
   await interaction.update({
     ...(embed ? { embeds: [embed] } : {}),
-    components: [buildTicketButtonsRow({ paymentConfirmed: true })],
+    components: [buildTicketButtonsRow({ state: 'claimed' })],
   });
 
   const staffMention = config.storeStaffRoleId ? `<@&${config.storeStaffRoleId}>` : '';
@@ -505,6 +507,61 @@ async function handleConfirmPaymentButton(interaction) {
       roles: config.storeStaffRoleId ? [config.storeStaffRoleId] : [],
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// 4-1. /danamasuk (staff) -> tandai dana sudah masuk, beri tahu pembeli produk segera dikirim
+// ---------------------------------------------------------------------------
+async function handleFundsReceivedCommand(interaction) {
+  if (!interaction.inGuild() || !isStaffOrOwner(interaction.member, interaction.guild)) {
+    await interaction.reply({ content: '🚫 Perintah ini hanya untuk staff atau owner.', ephemeral: true });
+    return;
+  }
+
+  const ticket = ticketStore.getTicketByChannelId(interaction.channelId);
+  if (!ticket || ticket.status !== 'open') {
+    await interaction.reply({
+      content: '⚠️ Perintah ini hanya bisa dipakai di dalam channel ticket yang masih aktif.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const updated = ticketStore.markFundsReceived(interaction.channelId, { receivedById: interaction.user.id });
+  if (!updated) {
+    await interaction.reply({ content: 'ℹ️ Dana untuk ticket ini sudah ditandai masuk sebelumnya.', ephemeral: true });
+    return;
+  }
+
+  await interaction.reply({
+    content:
+      `<@${ticket.buyerId}> 💰 **Dana sudah kami terima!** Terima kasih ya 🙏\n` +
+      `📦 **${ticket.productLabel}** untuk akun Roblox \`${ticket.robloxUsername}\` **akan segera dikirim**. ` +
+      'Mohon ditunggu sebentar.\n' +
+      `-# Diverifikasi oleh <@${interaction.user.id}>`,
+    allowedMentions: { users: [ticket.buyerId] },
+  });
+
+  // Update pesan ticket utama (status pembayaran + tombol) kalau masih bisa ditemukan.
+  try {
+    if (ticket.ticketMessageId) {
+      const msg = await interaction.channel.messages.fetch(ticket.ticketMessageId);
+      const baseEmbed = msg.embeds?.[0];
+      const payload = { components: [buildTicketButtonsRow({ state: 'received' })] };
+      if (baseEmbed) {
+        const embed = EmbedBuilder.from(baseEmbed);
+        const newField = { name: PAYMENT_STATUS_FIELD_NAME, value: `💰 Dana masuk — diverifikasi oleh <@${interaction.user.id}>. Produk segera dikirim.` };
+        const fields = embed.data.fields || [];
+        const fIdx = fields.findIndex((f) => f.name === PAYMENT_STATUS_FIELD_NAME);
+        if (fIdx >= 0) embed.spliceFields(fIdx, 1, newField);
+        else embed.addFields(newField);
+        payload.embeds = [embed];
+      }
+      await msg.edit(payload);
+    }
+  } catch (err) {
+    console.warn('[Store] Gagal update pesan ticket setelah /danamasuk:', err.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -634,6 +691,7 @@ module.exports = {
   handleUsernameModalSubmit,
   handleConfirmButton,
   handleConfirmPaymentButton,
+  handleFundsReceivedCommand,
   handleCloseButton,
   handleCloseSelect,
   handleCloseModalSubmit,
