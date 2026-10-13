@@ -157,12 +157,35 @@ function buildTicketCreatedDmEmbed({ ticket, channelId, guildIconUrl }) {
   return embed;
 }
 
+/** Embed DM ke pembeli setelah staff menutup ticket dengan status Completed (produk sudah dikirim). */
+function buildProductDeliveredDmEmbed({ ticket, note, closedByTag, guildIconUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(COLOR_SUCCESS)
+    .setTitle('🎉 Produk Berhasil Dikirim!')
+    .setDescription(
+      `Pesanan kamu di **KokoKrunch Store** sudah **berhasil dikirim** ke akun Roblox \`${ticket.robloxUsername}\`. ` +
+      'Silakan cek inventory kamu di game. Terima kasih sudah berbelanja bersama kami! 💛'
+    )
+    .addFields(
+      { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true },
+      { name: '📦 Produk', value: ticket.productLabel, inline: true },
+      { name: '💳 Total Dibayar', value: formatRupiah(ticket.total), inline: true },
+      { name: '📝 Catatan Admin', value: note && note.trim() ? note.trim() : '-' }
+    )
+    .setFooter({ text: `KokoKrunch Studios • Diproses oleh ${closedByTag}` })
+    .setTimestamp();
+
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
+  return embed;
+}
+
 module.exports = {
   buildStorePanelEmbed,
   buildRobloxConfirmEmbed,
   buildTicketEmbed,
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
+  buildProductDeliveredDmEmbed,
   CLOSE_STATUS_META,
   PAYMENT_STATUS_FIELD_NAME,
   PAYMENT_PENDING_TEXT,
