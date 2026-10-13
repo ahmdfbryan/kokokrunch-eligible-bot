@@ -7,6 +7,9 @@ const COLOR_DANGER = 0xe74c3c;
 const COLOR_INFO = 0x5865f2;
 const COLOR_REFUND = 0xf39c12;
 
+const PAYMENT_STATUS_FIELD_NAME = '📌 Status Pembayaran';
+const PAYMENT_PENDING_TEXT = '⏳ Menunggu pembayaran';
+
 /** Embed utama panel store -- info toko & tata cara pembelian. */
 function buildStorePanelEmbed({ guildIconUrl, storeOpen }) {
   const embed = new EmbedBuilder()
@@ -65,7 +68,8 @@ function buildTicketEmbed({ ticket, guildIconUrl }) {
       { name: '👤 Akun Roblox', value: `\`${ticket.robloxUsername}\``, inline: true },
       { name: '💵 Harga Produk', value: formatRupiah(ticket.price), inline: true },
       { name: '🔢 Kode Unik', value: `+${ticket.uniqueCode}`, inline: true },
-      { name: '💳 Total Bayar', value: `**${formatRupiah(ticket.total)}**`, inline: true }
+      { name: '💳 Total Bayar', value: `**${formatRupiah(ticket.total)}**`, inline: true },
+      { name: PAYMENT_STATUS_FIELD_NAME, value: PAYMENT_PENDING_TEXT }
     )
     .addFields({
       name: '⚠️ Penting',
@@ -160,4 +164,6 @@ module.exports = {
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
   CLOSE_STATUS_META,
+  PAYMENT_STATUS_FIELD_NAME,
+  PAYMENT_PENDING_TEXT,
 };
