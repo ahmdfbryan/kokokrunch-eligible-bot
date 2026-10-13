@@ -74,8 +74,8 @@ function buildTicketEmbed({ ticket, guildIconUrl }) {
     .addFields({
       name: '⚠️ Penting',
       value:
-        `Transfer harus **PERSIS ${formatRupiah(ticket.total)}** (termasuk kode unik) ` +
-        'agar pesanan otomatis dapat kami cocokkan. Setelah membayar, mohon tunggu staff kami memverifikasi.',
+        'Silahkan melakukan pembayaran melalui QR dibawah ini. Setelah melakukan pembayaran klik tombol ' +
+        '**Konfirmasi Pembayaran** dibawah agar staff kami dapat melakukan verifikasi pembayaran dan memproses pesanan kamu.',
     })
     .setFooter({ text: 'KokoKrunch Studios • Dipercaya & Terverifikasi' })
     .setTimestamp();
