@@ -1,5 +1,6 @@
 const { buildStorePanelEmbed } = require('../embeds/storeEmbeds');
 const { isStoreOpen } = require('./storeState');
+const { buildStoreButtonRows } = require('../commands/storePanel');
 const { getStorePanels, removeStorePanel } = require('./storePanelStore');
 
 /**
@@ -26,6 +27,7 @@ async function refreshStorePanels(client) {
 
       await message.edit({
         embeds: [buildStorePanelEmbed({ guildIconUrl, storeOpen })],
+        components: buildStoreButtonRows(), // sekaligus mengubah panel lama (dropdown) jadi tombol
       });
     } catch (err) {
       console.warn(`[StorePanel] Gagal refresh panel di channel ${panel.channelId}, menghapus referensi:`, err.message);
