@@ -130,6 +130,30 @@ function confirmPayment(channelId, { confirmedById }) {
   return tickets[idx];
 }
 
+function setTicketMessageId(channelId, messageId) {
+  const tickets = readAll();
+  const idx = tickets.findIndex((t) => t.channelId === channelId);
+  if (idx === -1) return null;
+  tickets[idx] = { ...tickets[idx], ticketMessageId: messageId };
+  writeAll(tickets);
+  return tickets[idx];
+}
+
+/** Tandai dana sudah masuk (diverifikasi staff). Return null kalau ticket tidak open / sudah ditandai. */
+function markFundsReceived(channelId, { receivedById }) {
+  const tickets = readAll();
+  const idx = tickets.findIndex((t) => t.channelId === channelId && t.status === 'open');
+  if (idx === -1 || tickets[idx].fundsReceived) return null;
+  tickets[idx] = {
+    ...tickets[idx],
+    fundsReceived: true,
+    fundsReceivedById: receivedById,
+    fundsReceivedAt: new Date().toISOString(),
+  };
+  writeAll(tickets);
+  return tickets[idx];
+}
+
 /**
  * Tutup paksa ticket yang masih tercatat 'open' tapi channel Discord-nya
  * sudah tidak ada lagi (misal dihapus manual langsung dari Discord, bukan
@@ -161,5 +185,7 @@ module.exports = {
   createTicket,
   closeTicket,
   confirmPayment,
+  setTicketMessageId,
+  markFundsReceived,
   forceCloseIfOrphaned,
 };
