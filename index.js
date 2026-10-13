@@ -149,6 +149,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    // --- Store: klik tombol "Konfirmasi Pembayaran" di dalam channel ticket (staff/owner) ---
+    if (interaction.isButton() && interaction.customId === storeFlow.CONFIRM_PAYMENT_BUTTON_ID) {
+      await storeFlow.handleConfirmPaymentButton(interaction);
+      return;
+    }
+
     // --- Store: klik tombol "Tutup Ticket" di dalam channel ticket -> tampilkan dropdown status ---
     if (interaction.isButton() && interaction.customId === storeFlow.CLOSE_TICKET_BUTTON_ID) {
       await storeFlow.handleCloseButton(interaction);
