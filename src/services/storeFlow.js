@@ -25,6 +25,8 @@ const {
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
   buildProductDeliveredDmEmbed,
+  buildPaymentClaimedEmbed,
+  buildFundsReceivedEmbed,
   PAYMENT_STATUS_FIELD_NAME,
 } = require('../embeds/storeEmbeds');
 
@@ -33,6 +35,7 @@ const USERNAME_INPUT_ID = 'roblox_username_input';
 const CONFIRM_YES_ID = 'store_confirm_yes';
 const CONFIRM_NO_ID = 'store_confirm_no';
 const CLOSE_TICKET_BUTTON_ID = 'store_close_ticket';
+const QRIS_ATTACHMENT_URL = 'attachment://qris.png';
 const CONFIRM_PAYMENT_BUTTON_ID = 'store_confirm_payment';
 const CLOSE_SELECT_ID = 'store_close_select';
 const CLOSE_MODAL_PREFIX = 'store_close_modal_';
@@ -428,7 +431,7 @@ async function createTicketChannel({ guild, buyerId, product, robloxUsername, ro
   const qrisBuffer = await generateDynamicQrisImage(ticket.total);
   const attachment = new AttachmentBuilder(qrisBuffer, { name: 'qris.png' });
 
-  const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage('attachment://qris.png');
+  const embed = buildTicketEmbed({ ticket, guildIconUrl }).setImage(QRIS_ATTACHMENT_URL);
 
   const closeRow = buildTicketButtonsRow({ state: 'none' });
 
@@ -487,7 +490,7 @@ async function handleConfirmPaymentButton(interaction) {
 
   // Update pesan ticket: status pembayaran di embed + tombol jadi nonaktif.
   const baseEmbed = interaction.message.embeds?.[0];
-  const embed = baseEmbed ? EmbedBuilder.from(baseEmbed) : null;
+  const embed = baseEmbed ? EmbedBuilder.from(baseEmbed).setImage(QRIS_ATTACHMENT_URL) : null;
   if (embed) {
     const newField = { name: PAYMENT_STATUS_FIELD_NAME, value: '🕐 Pembeli sudah konfirmasi bayar — menunggu bukti pembayaran & verifikasi staff' };
     const fields = embed.data.fields || [];
@@ -504,11 +507,9 @@ async function handleConfirmPaymentButton(interaction) {
   const staffMention = config.storeStaffRoleId ? `<@&${config.storeStaffRoleId}>` : '';
   await interaction.followUp({
     content:
-      `<@${ticket.buyerId}> terima kasih sudah konfirmasi! 🙏\n` +
-      `📸 Silakan **kirim bukti pembayaran** (screenshot/foto transfer) di channel ini, ` +
-      `pastikan nominal **${formatRupiah(ticket.total)}** terlihat jelas.\n` +
-      `Setelah itu mohon tunggu, staff kami akan memverifikasi pembayaranmu.` +
-      (staffMention ? `\n\n${staffMention} pembeli menyatakan sudah membayar, mohon dicek.` : ''),
+      `<@${ticket.buyerId}>` +
+      (staffMention ? ` • ${staffMention} pembeli menyatakan sudah membayar, mohon dicek.` : ''),
+    embeds: [buildPaymentClaimedEmbed({ ticket, guildIconUrl: interaction.guild?.iconURL({ size: 128 }) || null })],
     allowedMentions: {
       users: [ticket.buyerId],
       roles: config.storeStaffRoleId ? [config.storeStaffRoleId] : [],
@@ -541,11 +542,14 @@ async function handleFundsReceivedCommand(interaction) {
   }
 
   await interaction.reply({
-    content:
-      `<@${ticket.buyerId}> 💰 **Dana sudah kami terima!** Terima kasih ya 🙏\n` +
-      `📦 **${ticket.productLabel}** untuk akun Roblox \`${ticket.robloxUsername}\` **akan segera dikirim**. ` +
-      'Mohon ditunggu sebentar.\n' +
-      `-# Diverifikasi oleh <@${interaction.user.id}>`,
+    content: `<@${ticket.buyerId}>`,
+    embeds: [
+      buildFundsReceivedEmbed({
+        ticket,
+        staffId: interaction.user.id,
+        guildIconUrl: interaction.guild?.iconURL({ size: 128 }) || null,
+      }),
+    ],
     allowedMentions: { users: [ticket.buyerId] },
   });
 
@@ -556,7 +560,7 @@ async function handleFundsReceivedCommand(interaction) {
       const baseEmbed = msg.embeds?.[0];
       const payload = { components: [buildTicketButtonsRow({ state: 'received' })] };
       if (baseEmbed) {
-        const embed = EmbedBuilder.from(baseEmbed);
+        const embed = EmbedBuilder.from(baseEmbed).setImage(QRIS_ATTACHMENT_URL);
         const newField = { name: PAYMENT_STATUS_FIELD_NAME, value: `💰 Dana masuk — diverifikasi oleh <@${interaction.user.id}>. Produk segera dikirim.` };
         const fields = embed.data.fields || [];
         const fIdx = fields.findIndex((f) => f.name === PAYMENT_STATUS_FIELD_NAME);
