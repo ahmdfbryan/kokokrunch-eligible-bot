@@ -15,6 +15,7 @@ const storePanelCommand = require('./src/commands/storePanel');
 const storeToggleCommand = require('./src/commands/storeToggle');
 const goldDonationCommand = require('./src/commands/goldDonation');
 const howToDonateCommand = require('./src/commands/howToDonate');
+const stickyOffCommand = require('./src/commands/stickyOff');
 const { checkEligibilityEmbed } = require('./src/services/eligibilityCheck');
 const { registerPanelPayloadBuilder, scheduleStickyRepost } = require('./src/services/stickyPanelManager');
 const { syncFromResult } = require('./src/services/watchlistStore');
@@ -39,6 +40,7 @@ client.commands.set(storePanelCommand.data.name, storePanelCommand);
 client.commands.set(storeToggleCommand.data.name, storeToggleCommand);
 client.commands.set(goldDonationCommand.data.name, goldDonationCommand);
 client.commands.set(howToDonateCommand.data.name, howToDonateCommand);
+client.commands.set(stickyOffCommand.data.name, stickyOffCommand);
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Bot] Login berhasil sebagai ${readyClient.user.tag}`);
