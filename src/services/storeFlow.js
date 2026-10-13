@@ -25,12 +25,14 @@ const {
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
   buildProductDeliveredDmEmbed,
+  buildTransactionClosedDmEmbed,
   buildPaymentClaimedEmbed,
   buildFundsReceivedEmbed,
   buildPaymentDeadlineEmbed,
   PAYMENT_STATUS_FIELD_NAME,
 } = require('../embeds/storeEmbeds');
 
+const PRODUCT_BUTTON_PREFIX = 'store_product_btn_';
 const USERNAME_MODAL_PREFIX = 'store_username_modal_';
 const USERNAME_INPUT_ID = 'roblox_username_input';
 const CONFIRM_YES_ID = 'store_confirm_yes';
@@ -104,7 +106,8 @@ async function getActiveTicketByRobloxOrHeal(guild, { robloxUserId, robloxUserna
 // 1. Pilih produk di dropdown
 // ---------------------------------------------------------------------------
 async function handleProductSelect(interaction) {
-  const productId = interaction.values[0];
+  // Dipanggil dari tombol produk (customId = prefix + id) atau dropdown lama (values[0]).
+  const productId = interaction.isButton?.() ? interaction.customId.slice(PRODUCT_BUTTON_PREFIX.length) : interaction.values[0];
   const product = getProductById(productId);
 
   if (!product) {
@@ -696,24 +699,23 @@ async function handleCloseModalSubmit(interaction) {
     }
   }
 
-  // Status Completed -> DM pembeli: produk sudah dikirim + catatan admin.
-  if (closeStatus === 'completed') {
-    try {
-      const buyer = await interaction.client.users.fetch(closedTicket.buyerId);
-      await buyer.send({
-        embeds: [
-          buildProductDeliveredDmEmbed({
+  // DM pembeli sesuai status: completed (produk terkirim), cancelled (dibatalkan), refunded (direfund) + catatan admin.
+  try {
+    const buyer = await interaction.client.users.fetch(closedTicket.buyerId);
+    const dmEmbed =
+      closeStatus === 'completed'
+        ? buildProductDeliveredDmEmbed({ ticket: closedTicket, note, closedByTag: interaction.user.tag, guildIconUrl })
+        : buildTransactionClosedDmEmbed({
             ticket: closedTicket,
+            closeStatus,
             note,
             closedByTag: interaction.user.tag,
             guildIconUrl,
-          }),
-        ],
-      });
-    } catch (err) {
-      // DM pembeli tertutup / tidak bisa dikirim -- tidak masalah, pembeli tetap ditag di channel log.
-      console.warn(`[Store] Tidak bisa DM pembeli ${closedTicket.buyerId}: ${err.message}`);
-    }
+          });
+    await buyer.send({ embeds: [dmEmbed] });
+  } catch (err) {
+    // DM pembeli tertutup / tidak bisa dikirim -- tidak masalah, pembeli tetap ditag di channel log.
+    console.warn(`[Store] Tidak bisa DM pembeli ${closedTicket.buyerId}: ${err.message}`);
   }
 
   setTimeout(() => {
@@ -724,6 +726,7 @@ async function handleCloseModalSubmit(interaction) {
 }
 
 module.exports = {
+  PRODUCT_BUTTON_PREFIX,
   USERNAME_MODAL_PREFIX,
   CONFIRM_YES_ID,
   CONFIRM_NO_ID,
