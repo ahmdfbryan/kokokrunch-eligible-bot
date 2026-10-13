@@ -157,6 +157,50 @@ function buildTicketCreatedDmEmbed({ ticket, channelId, guildIconUrl }) {
   return embed;
 }
 
+/** Embed di channel ticket saat pembeli menekan "Konfirmasi Pembayaran": minta bukti bayar. */
+function buildPaymentClaimedEmbed({ ticket, guildIconUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(COLOR_INFO)
+    .setTitle('🕐 Menunggu Verifikasi Pembayaran')
+    .setDescription(
+      'Terima kasih sudah melakukan konfirmasi! 🙏\n\n' +
+      '📸 **Silakan kirim bukti pembayaran** (screenshot/foto transfer) di channel ini. ' +
+      `Pastikan nominal **${formatRupiah(ticket.total)}** terlihat jelas.\n\n` +
+      'Setelah itu mohon tunggu, staff kami akan segera memverifikasi pembayaranmu.'
+    )
+    .addFields(
+      { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true },
+      { name: '💳 Total Bayar', value: `**${formatRupiah(ticket.total)}**`, inline: true }
+    )
+    .setFooter({ text: 'KokoKrunch Studios • Store System' })
+    .setTimestamp();
+
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
+  return embed;
+}
+
+/** Embed di channel ticket saat staff menjalankan /danamasuk: dana diterima, produk segera dikirim. */
+function buildFundsReceivedEmbed({ ticket, staffId, guildIconUrl }) {
+  const embed = new EmbedBuilder()
+    .setColor(COLOR_SUCCESS)
+    .setTitle('💰 Dana Sudah Diterima')
+    .setDescription(
+      'Pembayaran kamu sudah **kami terima dan verifikasi**. Terima kasih! 🙏\n\n' +
+      `📦 **${ticket.productLabel}** untuk akun Roblox \`${ticket.robloxUsername}\` **akan segera dikirim**. ` +
+      'Mohon ditunggu sebentar ya.'
+    )
+    .addFields(
+      { name: '🆔 Ticket ID', value: `\`${ticket.ticketId}\``, inline: true },
+      { name: '💳 Total Dibayar', value: formatRupiah(ticket.total), inline: true },
+      { name: '✅ Diverifikasi oleh', value: `<@${staffId}>`, inline: true }
+    )
+    .setFooter({ text: 'KokoKrunch Studios • Store System' })
+    .setTimestamp();
+
+  if (guildIconUrl) embed.setThumbnail(guildIconUrl);
+  return embed;
+}
+
 /** Embed DM ke pembeli setelah staff menutup ticket dengan status Completed (produk sudah dikirim). */
 function buildProductDeliveredDmEmbed({ ticket, note, closedByTag, guildIconUrl }) {
   const embed = new EmbedBuilder()
@@ -186,6 +230,8 @@ module.exports = {
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
   buildProductDeliveredDmEmbed,
+  buildPaymentClaimedEmbed,
+  buildFundsReceivedEmbed,
   CLOSE_STATUS_META,
   PAYMENT_STATUS_FIELD_NAME,
   PAYMENT_PENDING_TEXT,
