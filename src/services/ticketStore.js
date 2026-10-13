@@ -114,6 +114,22 @@ function closeTicket(channelId, { status, note, closedById }) {
   return tickets[idx];
 }
 
+/** Tandai pembeli sudah konfirmasi bayar (menunggu verifikasi staff). Return null kalau ticket tidak open / sudah ditandai. */
+function confirmPayment(channelId, { confirmedById }) {
+  const tickets = readAll();
+  const idx = tickets.findIndex((t) => t.channelId === channelId && t.status === 'open');
+  if (idx === -1 || tickets[idx].paymentConfirmed) return null;
+
+  tickets[idx] = {
+    ...tickets[idx],
+    paymentConfirmed: true,
+    paymentConfirmedById: confirmedById,
+    paymentConfirmedAt: new Date().toISOString(),
+  };
+  writeAll(tickets);
+  return tickets[idx];
+}
+
 /**
  * Tutup paksa ticket yang masih tercatat 'open' tapi channel Discord-nya
  * sudah tidak ada lagi (misal dihapus manual langsung dari Discord, bukan
@@ -144,5 +160,6 @@ module.exports = {
   allocateUniqueCode,
   createTicket,
   closeTicket,
+  confirmPayment,
   forceCloseIfOrphaned,
 };
