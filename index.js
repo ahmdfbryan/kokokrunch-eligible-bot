@@ -24,6 +24,7 @@ const { startWatchlistScheduler } = require('./src/services/watchlistScheduler')
 const rolePanel = require('./src/services/rolePanelAutoSetup');
 const storeFlow = require('./src/services/storeFlow');
 const ticketStore = require('./src/services/ticketStore');
+const { refreshStorePanels } = require('./src/services/storePanelRefresh');
 
 const CHECK_ACCOUNT_MODAL_ID = 'panel_cek_akun_modal';
 const CHECK_ACCOUNT_USERNAME_INPUT_ID = 'roblox_username';
@@ -51,6 +52,9 @@ client.once(Events.ClientReady, (readyClient) => {
 
   startWatchlistScheduler(readyClient);
   rolePanel.ensureRolePanelsPosted(readyClient);
+
+  // Refresh panel Store yang sudah terkirim (status Buka/Tutup + ubah dropdown lama jadi tombol produk).
+  refreshStorePanels(readyClient).catch((err) => console.error('[Store] Gagal refresh panel saat startup:', err));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -130,7 +134,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // --- Store: pilih produk di dropdown ---
+    // --- Store: klik tombol produk di panel ---
+    if (interaction.isButton() && interaction.customId.startsWith(storePanelCommand.STORE_PRODUCT_BUTTON_PREFIX)) {
+      await storeFlow.handleProductSelect(interaction);
+      return;
+    }
+
+    // --- Store: pilih produk di dropdown (panel lama, sebelum ter-refresh jadi tombol) ---
     if (interaction.isStringSelectMenu() && interaction.customId === storePanelCommand.STORE_SELECT_MENU_ID) {
       await storeFlow.handleProductSelect(interaction);
       return;
