@@ -24,6 +24,7 @@ const {
   buildTicketEmbed,
   buildOrderStatusEmbed,
   buildTicketCreatedDmEmbed,
+  buildProductDeliveredDmEmbed,
   PAYMENT_STATUS_FIELD_NAME,
 } = require('../embeds/storeEmbeds');
 
@@ -675,6 +676,26 @@ async function handleCloseModalSubmit(interaction) {
       }
     } catch (err) {
       console.error('[Store] Gagal kirim log order:', err);
+    }
+  }
+
+  // Status Completed -> DM pembeli: produk sudah dikirim + catatan admin.
+  if (closeStatus === 'completed') {
+    try {
+      const buyer = await interaction.client.users.fetch(closedTicket.buyerId);
+      await buyer.send({
+        embeds: [
+          buildProductDeliveredDmEmbed({
+            ticket: closedTicket,
+            note,
+            closedByTag: interaction.user.tag,
+            guildIconUrl,
+          }),
+        ],
+      });
+    } catch (err) {
+      // DM pembeli tertutup / tidak bisa dikirim -- tidak masalah, pembeli tetap ditag di channel log.
+      console.warn(`[Store] Tidak bisa DM pembeli ${closedTicket.buyerId}: ${err.message}`);
     }
   }
 
