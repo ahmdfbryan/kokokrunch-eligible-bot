@@ -726,6 +726,7 @@ async function handleCloseModalSubmit(interaction) {
 }
 
 module.exports = {
+  isStaffOrOwner,
   PRODUCT_BUTTON_PREFIX,
   USERNAME_MODAL_PREFIX,
   CONFIRM_YES_ID,
