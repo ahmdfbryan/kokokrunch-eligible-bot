@@ -192,6 +192,7 @@ function getStats(now = new Date()) {
 
   const empty = () => ({ count: 0, revenue: 0 });
   const stats = { completed: empty(), today: empty(), month: empty(), cancelled: 0, refunded: 0, open: 0, total: tickets.length };
+  const staffMap = new Map(); // staffId -> { count, revenue, monthCount, monthRevenue }
 
   for (const t of tickets) {
     if (t.status === 'open') {
@@ -204,12 +205,23 @@ function getStats(now = new Date()) {
         if (key === todayKey) { stats.today.count++; stats.today.revenue += t.total || 0; }
         if (key.slice(0, 7) === monthKey) { stats.month.count++; stats.month.revenue += t.total || 0; }
       }
+      // Per staff: siapa yang memproses/menutup transaksi berhasil ini.
+      const sid = t.closedById || 'unknown';
+      const st = staffMap.get(sid) || { staffId: sid, count: 0, revenue: 0, monthCount: 0, monthRevenue: 0 };
+      st.count++;
+      st.revenue += t.total || 0;
+      if (t.closedAt && wibDateKey(t.closedAt).slice(0, 7) === monthKey) {
+        st.monthCount++;
+        st.monthRevenue += t.total || 0;
+      }
+      staffMap.set(sid, st);
     } else if (t.closeStatus === 'cancelled') {
       stats.cancelled++;
     } else if (t.closeStatus === 'refunded') {
       stats.refunded++;
     }
   }
+  stats.byStaff = [...staffMap.values()].sort((a, b) => b.revenue - a.revenue);
   return stats;
 }
 
