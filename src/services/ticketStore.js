@@ -177,7 +177,44 @@ function forceCloseIfOrphaned(channelId) {
   return tickets[idx];
 }
 
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/** Kunci tanggal WIB: 'YYYY-MM-DD' (hari) dan 'YYYY-MM' (bulan). */
+function wibDateKey(iso) {
+  return new Date(new Date(iso).getTime() + WIB_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** Statistik transaksi Store (semua waktu + hari ini + bulan ini, berdasarkan waktu WIB). */
+function getStats(now = new Date()) {
+  const tickets = readAll();
+  const todayKey = wibDateKey(now.toISOString());
+  const monthKey = todayKey.slice(0, 7);
+
+  const empty = () => ({ count: 0, revenue: 0 });
+  const stats = { completed: empty(), today: empty(), month: empty(), cancelled: 0, refunded: 0, open: 0, total: tickets.length };
+
+  for (const t of tickets) {
+    if (t.status === 'open') {
+      stats.open++;
+    } else if (t.closeStatus === 'completed') {
+      stats.completed.count++;
+      stats.completed.revenue += t.total || 0;
+      if (t.closedAt) {
+        const key = wibDateKey(t.closedAt);
+        if (key === todayKey) { stats.today.count++; stats.today.revenue += t.total || 0; }
+        if (key.slice(0, 7) === monthKey) { stats.month.count++; stats.month.revenue += t.total || 0; }
+      }
+    } else if (t.closeStatus === 'cancelled') {
+      stats.cancelled++;
+    } else if (t.closeStatus === 'refunded') {
+      stats.refunded++;
+    }
+  }
+  return stats;
+}
+
 module.exports = {
+  getStats,
   getOpenTicketByBuyer,
   getOpenTicketByRobloxUser,
   getTicketByChannelId,
