@@ -37,6 +37,20 @@ module.exports = {
       .setFooter({ text: `KokoKrunch Studios • Total ${s.total} ticket tercatat • waktu WIB` })
       .setTimestamp();
 
+    // Penjualan per staff (berdasarkan staff yang menutup/memproses ticket dengan status Completed).
+    const MAX_STAFF_SHOWN = 15;
+    const staffLines = s.byStaff.slice(0, MAX_STAFF_SHOWN).map((st, i) => {
+      const who = st.staffId === 'unknown' ? '_Tidak diketahui_' : `<@${st.staffId}>`;
+      return `**${i + 1}.** ${who}\n└ Total: **${st.count}** transaksi • ${formatRupiah(st.revenue)}\n└ Bulan ini: ${st.monthCount} transaksi • ${formatRupiah(st.monthRevenue)}`;
+    });
+    embed.addFields({
+      name: '👥 Penjualan per Staff (yang memproses)',
+      value: staffLines.length ? staffLines.join('\n').slice(0, 1024) : 'Belum ada transaksi berhasil.',
+    });
+    if (s.byStaff.length > MAX_STAFF_SHOWN) {
+      embed.setDescription(`-# Menampilkan ${MAX_STAFF_SHOWN} staff teratas dari ${s.byStaff.length} staff.`);
+    }
+
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };
